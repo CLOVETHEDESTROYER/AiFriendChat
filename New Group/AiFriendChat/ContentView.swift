@@ -8,23 +8,19 @@
 
 // App/ContentView.swift
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
     @StateObject private var authViewModel = AuthViewModel()
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         if authViewModel.isLoggedIn {
-            HomeView()
+            HomeView(modelContext: modelContext)
                 .environmentObject(authViewModel)
         } else {
             AuthView()
                 .environmentObject(authViewModel)
         }
-    }
-}
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
     }
 }
