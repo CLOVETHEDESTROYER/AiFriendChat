@@ -10,23 +10,25 @@ import SwiftData
 
 @main
 struct AiFriendChatApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    @StateObject private var authViewModel = AuthViewModel()
 
+    let container: ModelContainer = {
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let schema = Schema([CallSchedule.self])  // Remove Item.self if it's there
+            let modelConfiguration = ModelConfiguration(schema: schema)
+            
+            return try ModelContainer(for: schema, configurations: modelConfiguration)
         } catch {
+            print("SwiftData Container Error: \(error)")
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
-
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(authViewModel)
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(container)
     }
 }

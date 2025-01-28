@@ -2,9 +2,48 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
+    <!-- Reason for Local Network Access -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>This app requires access to the local network to communicate with nearby devices and services.</string>
+
+    <!-- App Bundle Identifier -->
+    <key>CFBundleIdentifier</key>
+    <string>com.yourcompany.aifriendchat</string>
+
+    <!-- App Transport Security Settings -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <!-- Allow Communication with Your DigitalOcean Droplet -->
+            <key>164.92.71.74</key> <!-- Your DigitalOcean Droplet IP -->
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+                <key>NSIncludesSubdomains</key>
+                <true/>
+            </dict>
+            <!-- Allow Communication with Localhost -->
+            <key>localhost</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+                <key>NSIncludesSubdomains</key>
+                <true/>
+            </dict>
+        </dict>
+    </dict>
+
+    <!-- Remote Notifications Background Mode -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>remote-notification</string>
+    </array>
+
+    <!-- BaseURL for Backend API -->
+    <key>BaseURL</key>
+    <string>https://voice.hyperlabsai.com</string> <!-- Replace with your backend's URL -->
 </dict>
 </plist>
