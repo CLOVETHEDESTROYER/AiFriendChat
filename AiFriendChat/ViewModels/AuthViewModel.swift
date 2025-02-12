@@ -12,6 +12,7 @@ import SwiftUI
 
 class AuthViewModel: ObservableObject {
     @Published var isLoggedIn = false
+    @Published var isLogin = true
     @Published var user: User?
     @Published var errorMessage: String?  // Add this line
     @Published var error: Error?

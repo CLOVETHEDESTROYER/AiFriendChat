@@ -9,37 +9,54 @@ import SwiftUI
 import SwiftData
 
 struct ScheduleCallView: View {
+    @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var authViewModel: AuthViewModel
     @StateObject private var viewModel: ScheduleCallViewModel
     @Environment(\.presentationMode) var presentationMode
+    @Query private var savedPrompts: [SavedPrompt]
     
-    // Initialize with pre-filled phone number and scenario
     init(phoneNumber: String, scenario: String) {
-        _viewModel = StateObject(wrappedValue: ScheduleCallViewModel(phoneNumber: phoneNumber, selectedScenario: scenario))
+        let vm = ScheduleCallViewModel()
+        vm.phoneNumber = phoneNumber
+        vm.selectedScenario = scenario
+        _viewModel = StateObject(wrappedValue: vm)
     }
     
     var body: some View {
         NavigationView {
             Form {
-                // Call Details Section
                 Section(header: Text("Call Details")) {
                     TextField("Phone Number", text: $viewModel.phoneNumber)
                         .keyboardType(.phonePad)
                     
-                    DatePicker("Scheduled Time", selection: $viewModel.scheduledTime, in: Date()...)
+                    DatePicker("Scheduled Time", selection: $viewModel.selectedDate, in: Date()...)
                     
-                    Picker("Scenario", selection: $viewModel.selectedScenario) {
-                        ForEach(viewModel.scenarios, id: \.self) { scenario in
-                            Text(scenario.replacingOccurrences(of: "_", with: " ").capitalized)
-                                .tag(scenario)
+                    Picker("Scenario Type", selection: $viewModel.isCustomScenario) {
+                        Text("Standard").tag(false)
+                        Text("Custom").tag(true)
+                    }
+                    
+                    if viewModel.isCustomScenario {
+                        Picker("Custom Scenario", selection: $viewModel.selectedCustomPrompt) {
+                            ForEach(savedPrompts) { prompt in
+                                Text("\(prompt.name) (\(prompt.scenarioId ?? "No ID"))")
+                                    .tag(Optional(prompt))
+                            }
+                        }
+                    } else {
+                        Picker("Scenario", selection: $viewModel.selectedScenario) {
+                            ForEach(standardScenarios, id: \.self) { scenario in
+                                Text(scenario.replacingOccurrences(of: "_", with: " ").capitalized)
+                                    .tag(scenario)
+                            }
                         }
                     }
                 }
                 
-                // Action Button Section
                 Section {
-                    Button(action: {
+                    Button {
                         viewModel.scheduleCall()
-                    }) {
+                    } label: {
                         if viewModel.isLoading {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle())
@@ -47,10 +64,10 @@ struct ScheduleCallView: View {
                             Text("Schedule Call")
                         }
                     }
-                    .disabled(viewModel.isLoading || viewModel.phoneNumber.isEmpty)
+                    .disabled(viewModel.isLoading || viewModel.phoneNumber.isEmpty || 
+                            (viewModel.isCustomScenario && viewModel.selectedCustomPrompt == nil))
                 }
                 
-                // Error Section (if applicable)
                 if let errorMessage = viewModel.errorMessage {
                     Section {
                         Text(errorMessage)
@@ -67,11 +84,28 @@ struct ScheduleCallView: View {
             } message: {
                 Text("Call has been scheduled successfully!")
             }
+            .alert("Error", isPresented: $viewModel.showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(viewModel.errorMessage ?? "")
+            }
+            .sheet(isPresented: $viewModel.showAuthPrompt) {
+                AuthPromptView(showAuthView: $viewModel.showAuthView)
+            }
+            .fullScreenCover(isPresented: $viewModel.showAuthView) {
+                AuthView()
+            }
         }
+        .onAppear {
+            viewModel.authViewModel = authViewModel
+        }
+    }
+    
+    private var standardScenarios: [String] {
+        ["default", "sister_emergency", "mother_emergency", "yacht_party", "instigator", "gameshow_host"]
     }
 }
 
-// Update the preview provider
 struct ScheduleCallView_Previews: PreviewProvider {
     static var previews: some View {
         ScheduleCallView(phoneNumber: "1234567890", scenario: "default")

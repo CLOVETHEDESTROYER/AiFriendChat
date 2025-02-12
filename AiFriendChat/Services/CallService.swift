@@ -36,14 +36,14 @@ class CallService {
     }()
     
     // MARK: - Schedule a Call
-    func scheduleCall(phoneNumber: String, scheduledTime: Date, scenario: String, completion: @escaping (Result<CallSchedule, Error>) -> Void) {
+    func scheduleCall(phoneNumber: String, scheduledTime: Date, scenario: String) async throws -> CallSchedule {
         // Check if user can schedule call
-        let purchaseManager = PurchaseManager.shared
-        guard purchaseManager.canScheduleCall() else {
-            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Scheduling calls is a premium feature. Please subscribe to schedule calls."])))
-            return
+        let canSchedule = await PurchaseManager.shared.canScheduleCall()
+        guard canSchedule else {
+            throw NSError(domain: "", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Scheduling calls is a premium feature. Please subscribe to schedule calls."])
         }
-
+        
         let url = URL(string: "\(baseURL)/schedule-call")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -60,80 +60,69 @@ class CallService {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-            
-            guard let data = data else {
-                completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
-                return
-            }
-            
-            do {
-                let callSchedule = try self.jsonDecoder.decode(CallSchedule.self, from: data)
-                completion(.success(callSchedule))
-            } catch {
-                completion(.failure(error))
-            }
-        }.resume()
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NSError(domain: "", code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "Server error"])
+        }
+        
+        return try jsonDecoder.decode(CallSchedule.self, from: data)
     }
     
     // MARK: - Make Immediate Call
-    func makeCall(phoneNumber: String, scenario: String, completion: @escaping (Result<String, Error>) -> Void) {
+    func makeCall(phoneNumber: String, scenario: String) async throws -> String {
         // Check if user can make call
-        let purchaseManager = PurchaseManager.shared
-        guard purchaseManager.canMakeCall() else {
-            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "You've used all your trial calls. Please subscribe to continue making calls."])))
-            return
+        guard try await PurchaseManager.shared.canMakeCall() else {
+            throw NSError(domain: "", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "You've used all your trial calls. Please subscribe to continue making calls."])
         }
-
+        
         let url = URL(string: "\(baseURL)/make-call/\(phoneNumber)/\(scenario)")!
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.addValue("Bearer \(KeychainManager.shared.getToken(forKey: "accessToken") ?? "")", forHTTPHeaderField: "Authorization")
         
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NSError(domain: "", code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "Server error"])
+        }
+        
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let message = json["message"] as? String else {
+            throw NSError(domain: "", code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])
+        }
+        
+        // Increment call count only after successful call
+        let purchaseManager = await PurchaseManager.shared
+        if !(await purchaseManager.isSubscribed) {
+            await MainActor.run {
+                purchaseManager.incrementCallCount()
             }
-            
-            guard let data = data else {
-                completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
-                return
-            }
-            
-            do {
-                let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
-                if let message = json?["message"] as? String {
-                    // Increment call count only after successful call
-                    if !purchaseManager.isSubscribed {
-                        DispatchQueue.main.async {
-                            purchaseManager.incrementCallCount()
-                        }
-                    }
-                    completion(.success(message))
-                } else {
-                    completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])))
-                }
-            } catch {
-                completion(.failure(error))
-            }
-        }.resume()
+        }
+        
+        return message
     }
     
     // MARK: - Update User Name
-    func updateUserName(to name: String, completion: @escaping (Result<String, Error>) -> Void) {
+    struct UpdateNameResponse: Codable {
+        let message: String
+    }
+    
+    func updateUserName(to name: String) async throws -> String {
         guard !name.isEmpty else {
-            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Name cannot be empty"])))
-            return
+            throw NSError(domain: "", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Name cannot be empty"])
         }
         
         guard let url = URL(string: "\(baseURL)/update-user-name") else {
-            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
-            return
+            throw NSError(domain: "", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
         }
         
         var request = URLRequest(url: url)
@@ -148,52 +137,121 @@ class CallService {
         // Create the correct request body format
         let requestBody = name  // Send just the string, not a dictionary
         
-        do {
-            let jsonData = try JSONEncoder().encode(requestBody)
-            request.httpBody = jsonData
-        } catch {
-            completion(.failure(error))
-            return
+        request.httpBody = try JSONEncoder().encode(requestBody)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        if let httpResponse = response as? HTTPURLResponse {
+            print("Status code: \(httpResponse.statusCode)")
+            print("Response headers: \(httpResponse.allHeaderFields)")
         }
         
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-            
-            if let httpResponse = response as? HTTPURLResponse {
-                print("Status code: \(httpResponse.statusCode)")
-                // Print response headers for debugging
-                print("Response headers: \(httpResponse.allHeaderFields)")
-            }
-            
-            guard let data = data else {
-                completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
-                return
-            }
-            
-            // Print response data for debugging
-            if let responseString = String(data: data, encoding: .utf8) {
-                print("Response data: \(responseString)")
-            }
-            
-            do {
-                let response = try JSONDecoder().decode(UpdateNameResponse.self, from: data)
-                completion(.success(response.message))
-            } catch {
-                print("Decoding error: \(error)")
-                completion(.failure(error))
-            }
-        }.resume()
-    }
-    // Response model to match the backend response
-    struct UpdateNameResponse: Codable {
-        let message: String
+        // Print response data for debugging
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("Response data: \(responseString)")
+        }
+        
+        let updateResponse = try JSONDecoder().decode(UpdateNameResponse.self, from: data)
+        return updateResponse.message
     }
     
     // MARK: - Fetch Scheduled Calls (Placeholder)
     func fetchScheduledCalls(completion: @escaping (Result<[CallSchedule], Error>) -> Void) {
         // Implement if necessary
+    }
+    
+    // MARK: - Custom Scenarios
+    struct CreateCustomScenarioResponse: Codable {
+        let scenarioId: String
+        let message: String
+        
+        enum CodingKeys: String, CodingKey {
+            case scenarioId = "scenario_id"
+            case message
+        }
+    }
+    
+    func createCustomScenario(name: String, prompt: String, persona: String, voiceType: VoiceType, temperature: Double) async throws -> String {
+        let url = URL(string: "\(baseURL)/realtime/custom-scenario")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue("Bearer \(KeychainManager.shared.getToken(forKey: "accessToken") ?? "")", forHTTPHeaderField: "Authorization")
+        
+        let body = [
+            "name": name,
+            "prompt": prompt,
+            "persona": persona,
+            "voice_type": voiceType.rawValue,
+            "temperature": temperature
+        ] as [String: Any]
+        
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NSError(domain: "", code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "Failed to create custom scenario"])
+        }
+        
+        let createResponse = try JSONDecoder().decode(CreateCustomScenarioResponse.self, from: data)
+        return createResponse.scenarioId
+    }
+    
+    func makeCustomCall(phoneNumber: String, scenarioId: String) async throws -> String {
+        let purchaseManager = await PurchaseManager.shared
+        
+        // Check subscription and trial status
+        guard try await purchaseManager.canMakeCall() else {
+            throw NSError(domain: "", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "You've used all your trial calls. Please subscribe to continue making calls."])
+        }
+        
+        // Increment call count BEFORE making the call if not subscribed
+        if !(await purchaseManager.isSubscribed) {
+            await MainActor.run {
+                purchaseManager.incrementCallCount()
+            }
+        }
+        
+        do {
+            // Make the API call
+            let url = URL(string: "\(baseURL)/make-custom-call/\(phoneNumber)/\(scenarioId)")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.addValue("Bearer \(KeychainManager.shared.getToken(forKey: "accessToken") ?? "")", forHTTPHeaderField: "Authorization")
+            
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else {
+                // If call fails, decrement the count
+                if !(await purchaseManager.isSubscribed) {
+                    await MainActor.run {
+                        purchaseManager.decrementCallCount()
+                    }
+                }
+                throw NSError(domain: "", code: -1,
+                             userInfo: [NSLocalizedDescriptionKey: "Failed to initiate custom call"])
+            }
+            
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let message = json["message"] as? String else {
+                throw NSError(domain: "", code: -1,
+                             userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])
+            }
+            
+            return message
+        } catch {
+            // If call fails, decrement the count
+            if !(await purchaseManager.isSubscribed) {
+                await MainActor.run {
+                    purchaseManager.decrementCallCount()
+                }
+            }
+            throw error
+        }
     }
 }

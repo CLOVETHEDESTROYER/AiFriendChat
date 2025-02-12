@@ -7,7 +7,9 @@
 
 import Foundation
 import SwiftUICore
+import SwiftData
 
+@MainActor
 class CallViewModel: ObservableObject {
     @Published var isCallInProgress = false
     @Published var errorMessage: String?
@@ -15,21 +17,68 @@ class CallViewModel: ObservableObject {
     
     private let baseURL: String = "https://voice.hyperlabsai.com"
     private let purchaseManager = PurchaseManager.shared
+    private let modelContext: ModelContext
+    
+    init(modelContext: ModelContext) {
+        self.modelContext = modelContext
+    }
 
     func initiateCall(phoneNumber: String, scenario: String) {
         clearMessages()
-
-        guard purchaseManager.canMakeCall() else {
+        
+        Task {
+            // First check if user can make call
             let remainingCalls = purchaseManager.getRemainingTrialCalls()
-            if remainingCalls == 0 {
+            
+            if !purchaseManager.isSubscribed && remainingCalls <= 0 {
                 setErrorMessage("You've used all your trial calls. Please subscribe to continue making calls.")
-            } else {
-                setErrorMessage("You have \(remainingCalls) trial calls remaining.")
+                return
             }
-            return
+            
+            // Increment call count BEFORE making the call if not subscribed
+            if !purchaseManager.isSubscribed {
+                purchaseManager.incrementCallCount()
+            }
+            
+            if scenario.hasPrefix("custom_") {
+                // Extract the prompt name from the scenario string
+                let promptName = String(scenario.dropFirst("custom_".count))
+                
+                // Find the saved prompt in SwiftData
+                let descriptor = FetchDescriptor<SavedPrompt>(
+                    predicate: #Predicate<SavedPrompt> { prompt in
+                        prompt.name == promptName
+                    }
+                )
+                
+                guard let savedPrompt = try? modelContext.fetch(descriptor).first,
+                      let scenarioId = savedPrompt.scenarioId else {
+                    setErrorMessage("Custom scenario not found")
+                    return
+                }
+                
+                // Use the makeCustomCall endpoint
+                do {
+                    let message = try await CallService.shared.makeCustomCall(
+                        phoneNumber: phoneNumber,
+                        scenarioId: scenarioId
+                    )
+                    setSuccessMessage(message)
+                    logCall(phoneNumber: phoneNumber, scenario: scenario, status: .completed)
+                } catch {
+                    // If call fails, decrement the count
+                    if !purchaseManager.isSubscribed {
+                        // Add method to decrement call count
+                        purchaseManager.decrementCallCount()
+                    }
+                    setErrorMessage(error.localizedDescription)
+                    logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
+                }
+            } else {
+                // Handle regular scenarios as before
+                performCall(phoneNumber: phoneNumber, scenario: scenario)
+            }
         }
-
-        performCall(phoneNumber: phoneNumber, scenario: scenario)
     }
 
     private func performCall(phoneNumber: String, scenario: String) {
@@ -54,6 +103,7 @@ class CallViewModel: ObservableObject {
                 self.isCallInProgress = false
                 if let error = error {
                     self.setErrorMessage("Network error: \(error.localizedDescription)")
+                    self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
                 } else if let httpResponse = response as? HTTPURLResponse {
                     print("Received response with status code: \(httpResponse.statusCode)")
                     switch httpResponse.statusCode {
@@ -61,11 +111,14 @@ class CallViewModel: ObservableObject {
                         if let data = data, let responseString = String(data: data, encoding: .utf8) {
                             print("Server response: \(responseString)")
                             self.setSuccessMessage("Call initiated successfully")
+                            self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .completed)
                         }
                     case 401:
                         self.setErrorMessage("Unauthorized: Please log in again")
+                        self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
                     default:
                         self.setErrorMessage("Server error: Status code \(httpResponse.statusCode)")
+                        self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
                     }
                 } else {
                     self.setErrorMessage("Unknown error occurred")
@@ -93,5 +146,19 @@ class CallViewModel: ObservableObject {
             self.errorMessage = nil
             self.successMessage = nil
         }
+    }
+
+    private func canMakeCall() async -> Bool {
+        return purchaseManager.getRemainingTrialCalls() > 0 || purchaseManager.isSubscribed
+    }
+
+    private func getRemainingTrialCalls() -> Int {
+        return purchaseManager.getRemainingTrialCalls()
+    }
+
+    private func logCall(phoneNumber: String, scenario: String, status: CallStatus) {
+        let callHistory = CallHistory(phoneNumber: phoneNumber, scenario: scenario, status: status)
+        modelContext.insert(callHistory)
+        try? modelContext.save()
     }
 }

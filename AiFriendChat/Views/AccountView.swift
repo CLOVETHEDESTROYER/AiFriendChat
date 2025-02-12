@@ -45,7 +45,11 @@ struct AccountView: View {
                         }
                     }
                     
-                    Button(action: { purchaseManager.restorePurchases() }) {
+                    Button(action: {
+                        Task {
+                            try? await purchaseManager.restorePurchases()
+                        }
+                    }) {
                         Label("Restore Purchases", systemImage: "arrow.clockwise")
                     }
                 }
@@ -86,8 +90,10 @@ struct AccountView: View {
             }
             .alert("Upgrade to Premium", isPresented: $showSubscriptionOptions) {
                 if let product = purchaseManager.products.first {
-                    Button("Subscribe (\(product.priceLocale.currencySymbol ?? "$")\(product.price))", role: .none) {
-                        purchaseManager.purchase(product: product)
+                    Button("Subscribe (\(product.displayPrice))", role: .none) {
+                        Task {
+                            try? await purchaseManager.purchase()
+                        }
                     }
                     Button("Cancel", role: .cancel) {}
                 }

@@ -14,7 +14,11 @@ struct AiFriendChatApp: App {
 
     let container: ModelContainer = {
         do {
-            let schema = Schema([CallSchedule.self])  // Remove Item.self if it's there
+            let schema = Schema([
+                CallSchedule.self,
+                CallHistory.self,
+                SavedPrompt.self
+            ])
             let modelConfiguration = ModelConfiguration(schema: schema)
             
             return try ModelContainer(for: schema, configurations: modelConfiguration)
@@ -24,10 +28,18 @@ struct AiFriendChatApp: App {
         }
     }()
     
+    init() {
+        // Initialize theme settings
+        _ = ThemeManager.shared
+        ThemeManager.applyTheme()
+    }
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(authViewModel)
+                .preferredColorScheme(.dark)
+                .background(ThemeManager.shared.backgroundColor)
         }
         .modelContainer(container)
     }

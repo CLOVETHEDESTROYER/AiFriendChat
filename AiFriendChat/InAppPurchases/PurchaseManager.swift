@@ -14,13 +14,16 @@ class PurchaseManager: ObservableObject {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.app", category: "PurchaseManager")
     
     private let productId = "com.aifriendchat.monthly_subscription"
-    private let trialCallsLimit = 3
+    private let trialCallsLimit = 1
     
     @Published private(set) var products: [Product] = []
     @Published private(set) var purchasedProducts: Set<String> = []
     @Published private(set) var isSubscribed = false
     
     private var updateListenerTask: Task<Void, Error>?
+    
+    private let callCountQueue = DispatchQueue(label: "com.aifriendchat.callcount")
+    private let defaults = UserDefaults.standard
     
     init() {
         updateListenerTask = listenForTransactions()
@@ -35,22 +38,45 @@ class PurchaseManager: ObservableObject {
     }
     
     var callsMade: Int {
-        UserDefaults.standard.integer(forKey: "callsMadeCount")
+        callCountQueue.sync {
+            defaults.integer(forKey: "callsMadeCount")
+        }
     }
     
     func incrementCallCount() {
-        let currentCount = callsMade
-        UserDefaults.standard.set(currentCount + 1, forKey: "callsMadeCount")
-        objectWillChange.send()
+        callCountQueue.sync {
+            let currentCount = defaults.integer(forKey: "callsMadeCount")
+            defaults.set(currentCount + 1, forKey: "callsMadeCount")
+            DispatchQueue.main.async {
+                self.objectWillChange.send()
+            }
+        }
+    }
+    
+    func decrementCallCount() {
+        callCountQueue.sync {
+            let currentCount = defaults.integer(forKey: "callsMadeCount")
+            if currentCount > 0 {
+                defaults.set(currentCount - 1, forKey: "callsMadeCount")
+                DispatchQueue.main.async {
+                    self.objectWillChange.send()
+                }
+            }
+        }
     }
     
     func getRemainingTrialCalls() -> Int {
         return max(0, trialCallsLimit - callsMade)
     }
     
-    func canMakeCall() async -> Bool {
-        await updateSubscriptionStatus()
-        return isSubscribed || getRemainingTrialCalls() > 0
+    func canMakeCall() async throws -> Bool {
+        do {
+            try await updateSubscriptionStatus()
+            return isSubscribed || getRemainingTrialCalls() > 0
+        } catch {
+            logger.error("Failed to update subscription status: \(error.localizedDescription)")
+            throw error
+        }
     }
     
     func canScheduleCall() async -> Bool {
@@ -62,7 +88,7 @@ class PurchaseManager: ObservableObject {
         return Task.detached {
             for await result in Transaction.updates {
                 do {
-                    let transaction = try await result.payloadValue
+                    let transaction = try result.payloadValue
                     await self.handle(transaction: transaction)
                 } catch {
                     self.logger.error("Transaction update error: \(error.localizedDescription)")
@@ -107,7 +133,7 @@ class PurchaseManager: ObservableObject {
             
             switch result {
             case .success(let verification):
-                let transaction = try await verification.payloadValue
+                let transaction = try verification.payloadValue
                 await handle(transaction: transaction)
                 
             case .userCancelled:
@@ -129,15 +155,19 @@ class PurchaseManager: ObservableObject {
         await updateSubscriptionStatus()
     }
     
-    func updateSubscriptionStatus() async {
+    @discardableResult
+    func updateSubscriptionStatus() async -> Bool {
+        var statusUpdated = false
         for await result in Transaction.currentEntitlements {
             do {
-                let transaction = try await result.payloadValue
+                let transaction = try result.payloadValue
                 await handle(transaction: transaction)
+                statusUpdated = true
             } catch {
                 logger.error("Failed to update subscription status: \(error.localizedDescription)")
             }
         }
+        return statusUpdated
     }
     
     #if DEBUG
