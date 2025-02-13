@@ -72,7 +72,7 @@ private struct PremiumUpgradeSection: View {
             
             // Features List
             VStack(alignment: .leading, spacing: 12) {
-                FeatureRow(icon: "infinity", text: "Unlimited AI calls")
+                FeatureRow(icon: "infinity", text: "20 minutes of call time per month")
                 FeatureRow(icon: "calendar", text: "Schedule calls in advance")
                 FeatureRow(icon: "text.bubble", text: "Custom conversation scenarios")
                 FeatureRow(icon: "person.2", text: "Priority support")

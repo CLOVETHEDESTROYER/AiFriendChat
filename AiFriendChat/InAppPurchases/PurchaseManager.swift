@@ -29,7 +29,11 @@ class PurchaseManager: ObservableObject {
         updateListenerTask = listenForTransactions()
         Task {
             await fetchProducts()
-            await updateSubscriptionStatus()
+            do {
+                try await updateSubscriptionStatus()
+            } catch {
+                logger.error("Failed to update subscription status during init: \(error.localizedDescription)")
+            }
         }
     }
     
@@ -69,18 +73,20 @@ class PurchaseManager: ObservableObject {
         return max(0, trialCallsLimit - callsMade)
     }
     
-    func canMakeCall() async throws -> Bool {
-        do {
-            try await updateSubscriptionStatus()
-            return isSubscribed || getRemainingTrialCalls() > 0
-        } catch {
-            logger.error("Failed to update subscription status: \(error.localizedDescription)")
-            throw error
+    private func updateSubscriptionStatus() async throws {
+        for await result in Transaction.currentEntitlements {
+            let transaction = try result.payloadValue
+            await handle(transaction: transaction)
         }
     }
     
-    func canScheduleCall() async -> Bool {
-        await updateSubscriptionStatus()
+    func canMakeCall() async throws -> Bool {
+        try await updateSubscriptionStatus()
+        return isSubscribed || getRemainingTrialCalls() > 0
+    }
+    
+    func canScheduleCall() async throws -> Bool {
+        try await updateSubscriptionStatus()
         return isSubscribed
     }
     
@@ -152,22 +158,7 @@ class PurchaseManager: ObservableObject {
     
     func restorePurchases() async throws {
         try await AppStore.sync()
-        await updateSubscriptionStatus()
-    }
-    
-    @discardableResult
-    func updateSubscriptionStatus() async -> Bool {
-        var statusUpdated = false
-        for await result in Transaction.currentEntitlements {
-            do {
-                let transaction = try result.payloadValue
-                await handle(transaction: transaction)
-                statusUpdated = true
-            } catch {
-                logger.error("Failed to update subscription status: \(error.localizedDescription)")
-            }
-        }
-        return statusUpdated
+        try await updateSubscriptionStatus()
     }
     
     #if DEBUG

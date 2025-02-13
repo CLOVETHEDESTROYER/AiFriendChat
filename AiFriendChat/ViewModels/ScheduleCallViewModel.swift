@@ -31,11 +31,6 @@ class ScheduleCallViewModel: ObservableObject {
     
     init() { }
     
-    func validatePhoneNumber() -> Bool {
-        let digitsOnly = phoneNumber.filter { $0.isNumber }
-        return digitsOnly.count == 10
-    }
-    
     func scheduleCall() {
         guard validatePhoneNumber() else {
             errorMessage = "Please enter a valid 10-digit phone number"
@@ -50,7 +45,7 @@ class ScheduleCallViewModel: ObservableObject {
         
         Task {
             // Check subscription status first
-            if !(await purchaseManager.isSubscribed) {
+            if !purchaseManager.isSubscribed {
                 errorMessage = "Scheduling calls is a premium feature. Please subscribe to schedule calls."
                 showError = true
                 showSubscriptionAlert = true
@@ -70,7 +65,7 @@ class ScheduleCallViewModel: ObservableObject {
                     
                     let formattedPhone = phoneNumber.filter { $0.isNumber }
                     
-                    let message = try await callService.makeCustomCall(
+                    _ = try await callService.makeCustomCall(
                         phoneNumber: formattedPhone,
                         scenarioId: scenarioId
                     )
@@ -92,6 +87,11 @@ class ScheduleCallViewModel: ObservableObject {
                 print("Error in scheduleCall: \(error)")
             }
         }
+    }
+    
+    private func validatePhoneNumber() -> Bool {
+        let digitsOnly = phoneNumber.filter { $0.isNumber }
+        return digitsOnly.count == 10
     }
     
     func makeCall() {

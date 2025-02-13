@@ -251,6 +251,50 @@ struct CustomPromptView: View {
             }
         }
     }
+    
+    private func deletePrompt(_ prompt: SavedPrompt) {
+        Task {
+            do {
+                modelContext.delete(prompt)
+                try? modelContext.save()
+            } catch {
+                errorMessage = error.localizedDescription
+                showAlert = true
+            }
+        }
+    }
+    
+    private func buildPromptList() -> some View {
+        ScrollView {
+            LazyVStack(spacing: 15) {
+                ForEach(savedPrompts) { prompt in
+                    SavedPromptCard(prompt: prompt, onDelete: {
+                        deletePrompt(prompt)
+                    })
+                }
+            }
+        }
+        .padding()
+    }
+    
+    private func buildInputSection() -> some View {
+        VStack(spacing: 10) {
+            TextField("Enter your custom prompt", text: $prompt, axis: .vertical)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .lineLimit(3...5)
+            
+            Button(action: savePrompt) {
+                Text("Save Prompt")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color("highlight"))
+                    .cornerRadius(10)
+            }
+        }
+        .padding()
+    }
 }
 
 struct SavedPromptCard: View {
@@ -273,10 +317,6 @@ struct SavedPromptCard: View {
                 .foregroundColor(.white.opacity(0.8))
             
             Text("Voice: \(prompt.voiceType.displayName)")
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.8))
-            
-            Text("Temperature: \(prompt.temperature, specifier: "%.1f")")
                 .font(.caption)
                 .foregroundColor(.white.opacity(0.7))
         }

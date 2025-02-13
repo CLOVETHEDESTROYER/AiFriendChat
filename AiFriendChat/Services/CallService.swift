@@ -38,8 +38,7 @@ class CallService {
     // MARK: - Schedule a Call
     func scheduleCall(phoneNumber: String, scheduledTime: Date, scenario: String) async throws -> CallSchedule {
         // Check if user can schedule call
-        let canSchedule = await PurchaseManager.shared.canScheduleCall()
-        guard canSchedule else {
+        guard try await PurchaseManager.shared.canScheduleCall() else {
             throw NSError(domain: "", code: -1,
                         userInfo: [NSLocalizedDescriptionKey: "Scheduling calls is a premium feature. Please subscribe to schedule calls."])
         }

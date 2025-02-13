@@ -3,7 +3,7 @@ import SwiftData
 
 struct CallHistoryView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \CallHistory.timestamp, order: .reverse) private var callHistory: [CallHistory]
+    @Query private var callHistory: [CallHistory]
     @StateObject private var purchaseManager = PurchaseManager.shared
     
     var body: some View {
@@ -21,13 +21,14 @@ struct CallHistoryView: View {
                 } else if callHistory.isEmpty {
                     EmptyHistoryView()
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(callHistory) { call in
+                    ScrollView(showsIndicators: true) {
+                        LazyVStack(spacing: 15) {
+                            ForEach(callHistory.sorted(by: { $0.timestamp > $1.timestamp })) { call in
                                 CallHistoryCard(call: call)
                             }
+                            .padding(.horizontal)
                         }
-                        .padding()
+                        .padding(.vertical)
                     }
                 }
             }
@@ -84,37 +85,46 @@ private struct CallHistoryCard: View {
     let call: CallHistory
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: "phone.fill")
-                    .foregroundColor(Color("highlight"))
-                
-                Text(call.phoneNumber)
+                Text(formatPhoneNumber(call.phoneNumber))
                     .font(.headline)
-                    .foregroundColor(.white)
-                
                 Spacer()
-                
-                StatusBadge(status: call.status)
+                Text(formatDate(call.timestamp))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             
+            Text("Scenario: \(call.scenario)")
+                .font(.subheadline)
+            
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(call.scenario.replacingOccurrences(of: "_", with: " ").capitalized)
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
-                    
-                    Text(call.timestamp.formatted(date: .abbreviated, time: .shortened))
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-                
                 Spacer()
+                StatusBadge(status: call.status)
             }
         }
         .padding()
-        .background(Color.black.opacity(0.3))
-        .cornerRadius(12)
+        .background(Color(.systemBackground))
+        .cornerRadius(10)
+        .shadow(radius: 2)
+    }
+    
+    private func formatPhoneNumber(_ number: String) -> String {
+        let cleaned = number.filter { $0.isNumber }
+        guard cleaned.count == 10 else { return number }
+        
+        let area = cleaned.prefix(3)
+        let prefix = cleaned.dropFirst(3).prefix(3)
+        let number = cleaned.dropFirst(6)
+        
+        return "(\(area)) \(prefix)-\(number)"
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 
@@ -122,18 +132,24 @@ private struct StatusBadge: View {
     let status: CallStatus
     
     var body: some View {
-        Text(status.rawValue)
+        Text(status.rawValue.capitalized)
             .font(.caption)
-            .fontWeight(.medium)
-            .foregroundColor(.white)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(status.color.opacity(0.2))
+            .background(statusColor.opacity(0.2))
+            .foregroundColor(statusColor)
             .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(status.color.opacity(0.5), lineWidth: 1)
-            )
+    }
+    
+    private var statusColor: Color {
+        switch status {
+        case .completed:
+            return .green
+        case .failed:
+            return .red
+        case .cancelled:
+            return .orange
+        }
     }
 }
 

@@ -23,7 +23,7 @@ struct SettingsView: View {
                                     .font(.headline)
                             }
                             
-                            Text("• Unlimited calls")
+                            Text("• 20 minutes of call time")
                             Text("• Schedule calls in advance")
                             Text("• Custom conversation scenarios")
                             Text("• Priority support")
