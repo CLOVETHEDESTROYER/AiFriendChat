@@ -12,24 +12,45 @@ class PurchaseManager: NSObject, ObservableObject {
     @Published var products: [SKProduct] = []
     @Published var purchasedProducts: Set<String> = []
     @Published var callsMade: Int = 0
+    @Published var isLoadingProducts = false
+    @Published var loadingError: String? = nil
     
     private let maxTrialCalls = 2
     private let userDefaults = UserDefaults.standard
     private let callCountKey = "callsMadeCount"
     private let monthlySubscriptionId = "com.aifriendchat.monthly_subscription"
+    private var productRequest: SKProductsRequest?
 
     override init() {
         super.init()
         callsMade = userDefaults.integer(forKey: callCountKey)
         SKPaymentQueue.default().add(self)
-        fetchProducts()
+        loadProducts()
     }
 
-    func fetchProducts() {
+    func loadProducts() {
+        // Reset state
+        isLoadingProducts = true
+        loadingError = nil
+        products = []
+        
         let productIDs: Set<String> = [monthlySubscriptionId]
+        productRequest?.cancel() // Cancel any existing request
+        
         let request = SKProductsRequest(productIdentifiers: productIDs)
+        productRequest = request
         request.delegate = self
         request.start()
+        
+        // Add timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
+            guard let self = self else { return }
+            if self.isLoadingProducts {
+                self.isLoadingProducts = false
+                self.loadingError = "Request timed out. Please try again."
+                self.productRequest?.cancel()
+            }
+        }
     }
 
     func incrementCallCount() {
@@ -81,7 +102,19 @@ class PurchaseManager: NSObject, ObservableObject {
 extension PurchaseManager: SKProductsRequestDelegate, SKPaymentTransactionObserver {
     func productsRequest(_ request: SKProductsRequest, didReceive response: SKProductsResponse) {
         DispatchQueue.main.async {
+            self.isLoadingProducts = false
             self.products = response.products
+            
+            if response.products.isEmpty {
+                self.loadingError = "No products available"
+            }
+        }
+    }
+    
+    func request(_ request: SKRequest, didFailWithError error: Error) {
+        DispatchQueue.main.async {
+            self.isLoadingProducts = false
+            self.loadingError = error.localizedDescription
         }
     }
 

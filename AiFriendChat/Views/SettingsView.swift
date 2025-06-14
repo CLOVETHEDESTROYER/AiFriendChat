@@ -35,6 +35,48 @@ struct SettingsView: View {
                     }
                 }
                 
+                Section("Subscription") {
+                    if !purchaseManager.isSubscribed {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if purchaseManager.isLoadingProducts {
+                                HStack {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Loading subscription options...")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                }
+                            } else if let error = purchaseManager.loadingError {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Unable to load subscription options")
+                                        .font(.subheadline)
+                                        .foregroundColor(.red)
+                                    Text(error)
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                    Button("Retry") {
+                                        purchaseManager.loadProducts()
+                                    }
+                                    .padding(.top, 4)
+                                }
+                            } else if let product = purchaseManager.products.first {
+                                Button(action: { 
+                                    purchaseManager.purchase(product: product)
+                                }) {
+                                    Text("Upgrade to Premium (\(product.priceLocale.currencySymbol ?? "$")\(product.price))")
+                                }
+                            }
+                        }
+                        
+                        Button(action: { purchaseManager.restorePurchases() }) {
+                            Text("Restore Purchases")
+                        }
+                    } else {
+                        Text("Premium Subscription Active")
+                            .foregroundColor(.green)
+                    }
+                }
+                
                 Section("Debug Options") {
                     #if DEBUG
                     Button("Toggle Premium Status") {
@@ -55,6 +97,14 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .navigationBarItems(trailing: Button("Done") { dismiss() })
+            
+            Text("Select an option")
+                .font(.largeTitle)
+                .foregroundColor(.gray)
+        }
+        .navigationViewStyle(DoubleColumnNavigationViewStyle())
+        .onAppear {
+            purchaseManager.loadProducts()
         }
     }
     
