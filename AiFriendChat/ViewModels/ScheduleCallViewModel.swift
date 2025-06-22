@@ -10,65 +10,88 @@
 import Foundation
 import SwiftUI
 
+@MainActor
 class ScheduleCallViewModel: ObservableObject {
-    @Published var phoneNumber: String
-    @Published var scheduledTime = Date()
-    @Published var selectedScenario: String
-    @Published var isLoading = false
+    @Published var phoneNumber: String = ""
+    @Published var selectedDate: Date = Date()
+    @Published var selectedScenario: String = "default"
+    @Published var isCustomScenario: Bool = false
+    @Published var selectedCustomPrompt: SavedPrompt?
     @Published var errorMessage: String?
     @Published var showSuccessAlert = false
+    @Published var isLoading = false
+    @Published var showAuthPrompt = false
+    @Published var showAuthView = false
+    @Published var showError = false
+    @Published var showSubscriptionAlert = false
     
-    let scenarios = ["default", "sister_emergency", "mother_emergency", "yacht_party", "instigator", "gameshow_host"]
     private let callService = CallService.shared
+    private let purchaseManager = PurchaseManager.shared
+    var authViewModel: AuthViewModel?
     
-    init(phoneNumber: String, selectedScenario: String) {
-        self.phoneNumber = phoneNumber
-        self.selectedScenario = scenarios.contains(selectedScenario) ? selectedScenario : "default"
-    }
-    
-    func validatePhoneNumber() -> Bool {
-        // Basic phone number validation
-        let phoneRegex = "^[0-9]{10}$" // Assumes 10-digit US phone numbers
-        let phonePredicate = NSPredicate(format: "SELF MATCHES %@", phoneRegex)
-        return phonePredicate.evaluate(with: phoneNumber.filter { $0.isNumber })
-    }
+    init() { }
     
     func scheduleCall() {
         guard validatePhoneNumber() else {
             errorMessage = "Please enter a valid 10-digit phone number"
+            showError = true
             return
         }
         
-        guard scheduledTime > Date() else {
-            errorMessage = "Please select a future time"
+        if !(authViewModel?.isLoggedIn ?? false) {
+            showAuthPrompt = true
             return
         }
         
-        isLoading = true
-        errorMessage = nil
-        
-        callService.scheduleCall(phoneNumber: phoneNumber, scheduledTime: scheduledTime, scenario: selectedScenario) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.isLoading = false
-                switch result {
-                case .success(let callSchedule):
-                    print("Call scheduled successfully: \(callSchedule)")
-                    self?.errorMessage = nil
-                    self?.showSuccessAlert = true
-                case .failure(let error):
-                    if let decodingError = error as? DecodingError,
-                       case .dataCorrupted(let context) = decodingError,
-                       context.codingPath.first?.stringValue == "scheduled_time" {
-                        print("Ignoring date decoding error and proceeding with success")
-                        self?.errorMessage = nil
-                        self?.showSuccessAlert = true
-                    } else {
-                        print("Scheduling error: \(error)")
-                        self?.errorMessage = error.localizedDescription
+        Task {
+            // Check subscription status first
+            if !purchaseManager.isSubscribed {
+                errorMessage = "Scheduling calls is a premium feature. Please subscribe to schedule calls."
+                showError = true
+                showSubscriptionAlert = true
+                return
+            }
+            
+            isLoading = true
+            errorMessage = nil
+            
+            do {
+                if isCustomScenario {
+                    guard let prompt = selectedCustomPrompt,
+                          let scenarioId = prompt.scenarioId else {
+                        throw NSError(domain: "", code: -1, 
+                                    userInfo: [NSLocalizedDescriptionKey: "Invalid custom scenario"])
                     }
+                    
+                    let formattedPhone = phoneNumber.filter { $0.isNumber }
+                    
+                    _ = try await callService.makeCustomCall(
+                        phoneNumber: formattedPhone,
+                        scenarioId: scenarioId
+                    )
+                    isLoading = false
+                    showSuccessAlert = true
+                } else {
+                    _ = try await callService.scheduleCall(
+                        phoneNumber: phoneNumber,
+                        scheduledTime: selectedDate,
+                        scenario: selectedScenario
+                    )
+                    isLoading = false
+                    showSuccessAlert = true
                 }
+            } catch {
+                isLoading = false
+                errorMessage = error.localizedDescription
+                showError = true
+                print("Error in scheduleCall: \(error)")
             }
         }
+    }
+    
+    private func validatePhoneNumber() -> Bool {
+        let digitsOnly = phoneNumber.filter { $0.isNumber }
+        return digitsOnly.count == 10
     }
     
     func makeCall() {
@@ -80,16 +103,19 @@ class ScheduleCallViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        callService.makeCall(phoneNumber: phoneNumber, scenario: selectedScenario) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.isLoading = false
-                switch result {
-                case .success(let message):
-                    print("Call initiated: \(message)")
-                    self?.showSuccessAlert = true
-                case .failure(let error):
-                    self?.errorMessage = error.localizedDescription
-                }
+        Task {
+            do {
+                let message = try await callService.makeCall(
+                    phoneNumber: phoneNumber,
+                    scenario: selectedScenario
+                )
+                isLoading = false
+                showSuccessAlert = true
+                print("Call initiated: \(message)")
+            } catch {
+                isLoading = false
+                errorMessage = error.localizedDescription
+                print("Call error: \(error)")
             }
         }
     }

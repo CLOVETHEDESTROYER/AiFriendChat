@@ -71,11 +71,20 @@ struct AccountView: View {
                             .padding(.top, 8)
                         }
                     }
+<<<<<<< HEAD
                     .padding(.vertical, 4)
                 }
                 
                 Section("Subscription Management") {
                     Button(action: { purchaseManager.restorePurchases() }) {
+=======
+                    
+                    Button(action: {
+                        Task {
+                            try? await purchaseManager.restorePurchases()
+                        }
+                    }) {
+>>>>>>> webrtc-integration
                         Label("Restore Purchases", systemImage: "arrow.clockwise")
                     }
                     
@@ -129,6 +138,7 @@ struct AccountView: View {
             .sheet(isPresented: $showTerms) {
                 TermsOfServiceView()
             }
+<<<<<<< HEAD
             .sheet(isPresented: $showEULA) {
                 EULAView()
             }
@@ -136,6 +146,14 @@ struct AccountView: View {
                 if let product = purchaseManager.preferredSubscriptionProduct {
                     Button("Subscribe (\(product.priceLocale.currencySymbol ?? "$")\(product.price)/week)", role: .none) {
                         purchaseManager.purchase(product: product)
+=======
+            .alert("Upgrade to Premium", isPresented: $showSubscriptionOptions) {
+                if let product = purchaseManager.products.first {
+                    Button("Subscribe (\(product.displayPrice))", role: .none) {
+                        Task {
+                            try? await purchaseManager.purchase()
+                        }
+>>>>>>> webrtc-integration
                     }
                     Button("Cancel", role: .cancel) {}
                 }

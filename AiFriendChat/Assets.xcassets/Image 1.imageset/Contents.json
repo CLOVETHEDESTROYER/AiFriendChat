@@ -1,17 +1,14 @@
 {
   "images" : [
     {
-      "filename" : "AiFriendChatArtBlackBackground.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "AiFriendChatArtAppIcon.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "AiFriendChatArtIconwithname.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

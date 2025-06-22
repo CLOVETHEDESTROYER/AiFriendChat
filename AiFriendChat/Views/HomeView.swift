@@ -1,60 +1,59 @@
 import SwiftUI
 import SwiftData
-import os.log // Add this import at the top
+import os.log
+import StoreKit
+
+private enum Field: Hashable {
+    case userName, phoneNumber
+}
 
 struct HomeView: View {
-    // Add logger as a private property at the top of your HomeView
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.app", category: "HomeView")
     
     @EnvironmentObject var authViewModel: AuthViewModel
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel: HomeViewModel
+<<<<<<< HEAD
     @StateObject private var callViewModel = CallViewModel()
     @StateObject private var backendService = BackendService.shared
+=======
+    @StateObject private var callViewModel: CallViewModel
+    @StateObject private var purchaseManager = PurchaseManager.shared
+    
+    // MARK: - State Properties
+>>>>>>> webrtc-integration
     @State private var phoneNumber = ""
     @State private var selectedScenario = "default"
     @State private var userName = ""
     @State private var isUpdatingName = false
+<<<<<<< HEAD
     @State private var usageStats: UsageStats?
 
     // Notification state variables
+=======
+    @State private var showAlert = false
+>>>>>>> webrtc-integration
     @State private var alertTitle = ""
     @State private var alertMessage = ""
-    @State private var showAlert = false
-    @State private var showPremiumAlert = false // Added for premium alert
-
-    
-    // To track active TextField
-    @FocusState private var activeField: Field?
-    
-    // Scenarios list
-    var scenarios: [String] {
-        ["default", "sister_emergency", "mother_emergency", "yacht_party", "instigator", "gameshow_host"]
-    }
-    
-    // Enum to track the current active field
-    private enum Field: Hashable {
-        case userName, phoneNumber
-    }
-    
-    @StateObject private var purchaseManager = PurchaseManager.shared
+    @State private var showPremiumAlert = false
     @State private var showSubscriptionAlert = false
     @State private var showSubscriptionPrompt = false
-
-    // Add these state variables
     @State private var showAccountSheet = false
     @State private var showSettingsSheet = false
     @State private var showHelpSheet = false
     @State private var showCallHistory = false
-
+    
+    @FocusState private var activeField: Field?
+    
     init(modelContext: ModelContext) {
         _viewModel = StateObject(wrappedValue: HomeViewModel(modelContext: modelContext))
-        _callViewModel = StateObject(wrappedValue: CallViewModel())
+        _callViewModel = StateObject(wrappedValue: CallViewModel(modelContext: modelContext))
     }
     
     var body: some View {
         NavigationStack {
             ZStack {
+<<<<<<< HEAD
                 // Gradient background
                 LinearGradient(
                     gradient: Gradient(colors: [Color("Color 1"), Color("Color 2")]),
@@ -333,99 +332,56 @@ struct HomeView: View {
                 loadUsageStats()
             }
             #if DEBUG
+=======
+                BackgroundView()
+                MainContentView(
+                    phoneNumber: $phoneNumber,
+                    selectedScenario: $selectedScenario,
+                    userName: $userName,
+                    activeField: _activeField.projectedValue,
+                    viewModel: viewModel,
+                    callViewModel: callViewModel,
+                    purchaseManager: purchaseManager,
+                    showSubscriptionPrompt: $showSubscriptionPrompt,
+                    showSubscriptionAlert: $showSubscriptionAlert
+                )
+            }
+            .navigationTitle("")
+            .navigationBarItems(leading: LogoutButton(authViewModel: authViewModel))
+>>>>>>> webrtc-integration
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu("Debug") {
-                        Button("Toggle Premium") {
-                            purchaseManager.toggleDebugPremium()
-                        }
-                        
-                        Button("Reset Call Count") {
-                            UserDefaults.standard.removeObject(forKey: "callsMadeCount")
-                            purchaseManager.objectWillChange.send()
-                        }
-                        
-                        Button("Add Test Call") {
-                            let currentCalls = UserDefaults.standard.integer(forKey: "callsMadeCount")
-                            UserDefaults.standard.set(currentCalls + 1, forKey: "callsMadeCount")
-                            purchaseManager.objectWillChange.send()
-                        }
-                        
-                        Text("Calls Made: \(purchaseManager.callsMade)")
-                    }
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    MenuButtons(
+                        showAccountSheet: $showAccountSheet,
+                        showCallHistory: $showCallHistory,
+                        showSettingsSheet: $showSettingsSheet,
+                        showHelpSheet: $showHelpSheet,
+                        showSubscriptionAlert: $showSubscriptionAlert,
+                        purchaseManager: purchaseManager,
+                        authViewModel: authViewModel
+                    )
                 }
             }
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Menu {
-                        Button(action: { showAccountSheet = true }) {
-                            Label("Account", systemImage: "person.circle")
-                        }
-                        
-                        Button(action: { showCallHistory = true }) {
-                            Label("Call History", systemImage: "clock.arrow.circlepath")
-                        }
-                        
-                        Button(action: { showSettingsSheet = true }) {
-                            Label("Settings", systemImage: "gear")
-                        }
-                        
-                        if !purchaseManager.isSubscribed {
-                            Button(action: { showSubscriptionAlert = true }) {
-                                Label("Upgrade to Premium", systemImage: "star.fill")
-                            }
-                        }
-                        
-                        Button(action: { showHelpSheet = true }) {
-                            Label("Help & Support", systemImage: "questionmark.circle")
-                        }
-                        
-                        Divider()
-                        
-                        Button(role: .destructive, action: {
-                            authViewModel.logout()
-                        }) {
-                            Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
-                        }
-                        
-                        #if DEBUG
-                        Divider()
-                        
-                        Button(action: {
-                            purchaseManager.toggleDebugPremium()
-                        }) {
-                            Label("Toggle Premium", systemImage: "hammer")
-                        }
-                        
-                        Button(action: {
-                            UserDefaults.standard.removeObject(forKey: "callsMadeCount")
-                        }) {
-                            Label("Reset Call Count", systemImage: "arrow.counterclockwise")
-                        }
-                        #endif
-                    } label: {
-                        Image(systemName: "line.3.horizontal")
-                            .foregroundColor(.primary)
-                    }
-                }
-            }
-            // Add sheets for each menu item
-            .sheet(isPresented: $showAccountSheet) {
-                AccountView()
-            }
-            .sheet(isPresented: $showSettingsSheet) {
-                SettingsView()
-            }
-            .sheet(isPresented: $showHelpSheet) {
-                HelpSupportView()
-            }
-            .sheet(isPresented: $showCallHistory) {
-                CallHistoryView()
-            }
+        }
+        .alert("Upgrade to Premium", isPresented: $showSubscriptionAlert) {
+            SubscriptionAlertButtons(purchaseManager: purchaseManager)
+        } message: {
+            Text("Get unlimited calls and scheduling features!")
+        }
+        .alert("Premium Feature", isPresented: $showPremiumAlert) {
+            PremiumAlertButtons(showSubscriptionAlert: $showSubscriptionAlert)
+        } message: {
+            Text("Call scheduling is available for premium subscribers only.")
+        }
+        .onChange(of: callViewModel.errorMessage) { oldValue, newValue in
+            handleCallViewModelError(newValue)
+        }
+        .onChange(of: callViewModel.successMessage) { oldValue, newValue in
+            handleCallViewModelSuccess(newValue)
         }
     }
     
+<<<<<<< HEAD
     private func loadUsageStats() {
         Task {
             do {
@@ -442,48 +398,220 @@ struct HomeView: View {
     
     private func makeImmediateCall() {
         guard !phoneNumber.isEmpty else {
+=======
+    // MARK: - Helper Views and Methods
+    private func handleCallViewModelError(_ error: String?) {
+        if let error = error {
+>>>>>>> webrtc-integration
             alertTitle = "Error"
-            alertMessage = "Please enter a phone number."
+            alertMessage = error
             showAlert = true
-            return
         }
-        
-        callViewModel.initiateCall(phoneNumber: phoneNumber, scenario: selectedScenario)
     }
     
-    private func updateUserName() {
-        logger.debug("Starting updateUserName function")
-        let trimmedName = userName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else {
-            logger.error("Attempted to update with empty username")
-            alertTitle = "Error"
-            alertMessage = "Name cannot be empty."
+    private func handleCallViewModelSuccess(_ success: String?) {
+        if let success = success {
+            alertTitle = "Success"
+            alertMessage = success
             showAlert = true
-            return
-        }
-        
-        isUpdatingName = true
-        
-        CallService.shared.updateUserName(to: trimmedName) { result in
-            DispatchQueue.main.async {
-                self.isUpdatingName = false
-                switch result {
-                case .success(let message):
-                    logger.debug("Successfully updated username: \(message)")
-                    alertTitle = "Success"
-                    alertMessage = message
-                    UserDefaults.standard.set(trimmedName, forKey: "userName")
-                    
-                case .failure(let error):
-                    logger.error("Failed to update username: \(error.localizedDescription)")
-                    alertTitle = "Error"
-                    alertMessage = "Failed to update name: \(error.localizedDescription)"
-                }
-                showAlert = true
-            }
         }
     }
 }
+
+// MARK: - Supporting Views
+private struct BackgroundView: View {
+    var body: some View {
+        LinearGradient(
+            gradient: Gradient(colors: [Color("Color"), Color("Color 2")]),
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .edgesIgnoringSafeArea(.all)
+    }
+}
+
+private struct SubscriptionAlertButtons: View {
+    @ObservedObject var purchaseManager: PurchaseManager
+    
+    var body: some View {
+        Group {
+            if let product = purchaseManager.products.first {
+                Button("Subscribe (\(product.displayPrice))", role: .none) {
+                    Task {
+                        try? await purchaseManager.purchase()
+                    }
+                }
+                Button("Restore Purchases", role: .none) {
+                    Task {
+                        try? await purchaseManager.restorePurchases()
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+}
+
+private struct MainContentView: View {
+    @Binding var phoneNumber: String
+    @Binding var selectedScenario: String
+    @Binding var userName: String
+    @FocusState.Binding var activeField: Field?
+    @ObservedObject var viewModel: HomeViewModel
+    @ObservedObject var callViewModel: CallViewModel
+    @ObservedObject var purchaseManager: PurchaseManager
+    @Binding var showSubscriptionPrompt: Bool
+    @Binding var showSubscriptionAlert: Bool
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 25) {
+                Text("Welcome to AI Friend Chat")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.top)
+                
+                CallInputSection(
+                    phoneNumber: $phoneNumber,
+                    selectedScenario: $selectedScenario,
+                    userName: $userName,
+                    activeField: $activeField,
+                    viewModel: viewModel,
+                    callViewModel: callViewModel,
+                    purchaseManager: purchaseManager
+                )
+            }
+            .padding()
+        }
+    }
+}
+
+private struct LogoutButton: View {
+    @ObservedObject var authViewModel: AuthViewModel
+    
+    var body: some View {
+        Button {
+            Task {
+                authViewModel.logout()
+            }
+        } label: {
+            Text("Logout")
+                .foregroundColor(.white)
+        }
+    }
+}
+
+private struct PremiumAlertButtons: View {
+    @Binding var showSubscriptionAlert: Bool
+    
+    var body: some View {
+        Button("Subscribe", role: .none) {
+            showSubscriptionAlert = true
+        }
+        Button("Cancel", role: .cancel) {}
+    }
+}
+
+private struct MenuButtons: View {
+    @Binding var showAccountSheet: Bool
+    @Binding var showCallHistory: Bool
+    @Binding var showSettingsSheet: Bool
+    @Binding var showHelpSheet: Bool
+    @Binding var showSubscriptionAlert: Bool
+    @ObservedObject var purchaseManager: PurchaseManager
+    @ObservedObject var authViewModel: AuthViewModel
+    
+    var body: some View {
+        Menu {
+            Button(action: { showAccountSheet = true }) {
+                Label("Account", systemImage: "person.circle")
+            }
+            Button(action: { showCallHistory = true }) {
+                Label("Call History", systemImage: "clock")
+            }
+            Button(action: { showSettingsSheet = true }) {
+                Label("Settings", systemImage: "gear")
+            }
+            Button(action: { showHelpSheet = true }) {
+                Label("Help", systemImage: "questionmark.circle")
+            }
+            
+            if !purchaseManager.isSubscribed {
+                Button(action: { showSubscriptionAlert = true }) {
+                    Label("Upgrade to Premium", systemImage: "star.fill")
+                }
+            }
+            
+            Divider()
+            
+            Button(role: .destructive, action: {
+                authViewModel.logout()
+            }) {
+                Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
+            }
+            
+            #if DEBUG
+            Menu("Debug") {
+                Button("Toggle Premium") {
+                    purchaseManager.toggleDebugPremium()
+                }
+            }
+            #endif
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .foregroundColor(.white)
+        }
+    }
+}
+
+private struct CallInputSection: View {
+    @Binding var phoneNumber: String
+    @Binding var selectedScenario: String
+    @Binding var userName: String
+    @FocusState.Binding var activeField: Field?
+    @ObservedObject var viewModel: HomeViewModel
+    @ObservedObject var callViewModel: CallViewModel
+    @ObservedObject var purchaseManager: PurchaseManager
+    
+    var body: some View {
+        VStack(spacing: 15) {
+            TextField("Phone Number", text: $phoneNumber)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .keyboardType(.phonePad)
+                .focused($activeField, equals: .phoneNumber)
+            
+            Picker("Scenario", selection: $selectedScenario) {
+                ForEach(scenarios, id: \.self) { scenario in
+                    Text(scenario.replacingOccurrences(of: "_", with: " ").capitalized)
+                        .tag(scenario)
+                }
+            }
+            .pickerStyle(MenuPickerStyle())
+            
+            Button(action: makeCall) {
+                Text("Make Call")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .cornerRadius(10)
+            }
+        }
+        .padding()
+    }
+    
+    private var scenarios: [String] {
+        ["default", "sister_emergency", "mother_emergency", "yacht_party", "instigator", "gameshow_host"]
+    }
+    
+    private func makeCall() {
+        callViewModel.initiateCall(phoneNumber: phoneNumber, scenario: selectedScenario)
+    }
+}
+
+// Additional supporting view structs would go here...
 
 
 

@@ -9,7 +9,8 @@ import SwiftUI
 import SwiftData
 
 struct AuthView: View {
-    @EnvironmentObject var viewModel: AuthViewModel
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authViewModel: AuthViewModel
     @State private var isLogin = true
     @State private var email = ""
     @State private var password = ""
@@ -24,7 +25,7 @@ struct AuthView: View {
                 
                 // Remaining 3/4 of the screen with a gradient
                 LinearGradient(
-                    gradient: Gradient(colors: [Color("Color"), Color("AccentColor")]),
+                    gradient: Gradient(colors: [Color("Color"), Color("Color 2")]),
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -44,7 +45,7 @@ struct AuthView: View {
                 // App name
                 Text("AI FRIEND CHAT")
                     .font(.system(size: 42, weight: .heavy, design: .rounded)) // Larger font size and boldness
-                    .foregroundColor(.black) // Black text for app name
+                    .foregroundColor(.white) // Black text for app name
                     .padding(.bottom, 20)
                 
                 // Login/Register Title
@@ -56,7 +57,7 @@ struct AuthView: View {
                 // Email Text Field
                 TextField("Email", text: $email)
                     .padding()
-                    .background(Color.white.opacity(0.8)) // Background for better contrast
+                    .background(Color.white.opacity(0.4)) // Background for better contrast
                     .cornerRadius(15) // Rounded edges
                     .foregroundColor(.black) // Black text inside the text field
                     .autocapitalization(.none) // Disable capitalization
@@ -67,17 +68,18 @@ struct AuthView: View {
                 // Password Text Field
                 SecureField("Password", text: $password)
                     .padding()
-                    .background(Color.white.opacity(0.8)) // Background for better contrast
+                    .background(Color.white.opacity(0.4)) // Background for better contrast
                     .cornerRadius(15) // Rounded edges
                     .foregroundColor(.black) // Black text inside the secure field
                     .padding(.horizontal, 30)
                 
                 // Login/Register Button
                 Button(action: {
+                    let lowercaseEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
                     if isLogin {
-                        viewModel.login(email: email.trimmingCharacters(in: .whitespacesAndNewlines), password: password)
+                        authViewModel.login(email: lowercaseEmail, password: password)
                     } else {
-                        viewModel.register(email: email.trimmingCharacters(in: .whitespacesAndNewlines), password: password)
+                        authViewModel.register(email: lowercaseEmail, password: password)
                     }
                 }) {
                     Text(isLogin ? "Login" : "Register")
@@ -85,14 +87,14 @@ struct AuthView: View {
                         .foregroundColor(.white)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color("highlight")) // Button uses "highlight" color
-                        .cornerRadius(10) // Rounded button
+                        .background(Color("highlight"))
+                        .cornerRadius(10)
                         .padding(.horizontal, 30)
                 }
                 .padding()
                 
                 // Error Message
-                if let errorMessage = viewModel.errorMessage {
+                if let errorMessage = authViewModel.errorMessage {
                     Text(errorMessage)
                         .foregroundColor(.red)
                         .padding()
@@ -101,12 +103,17 @@ struct AuthView: View {
                 // Toggle Between Login and Register
                 Button(isLogin ? "Need an account? Register" : "Already have an account? Login") {
                     isLogin.toggle()
-                    viewModel.errorMessage = nil
+                    authViewModel.errorMessage = nil
                 }
                 .foregroundColor(.white)
                 .padding()
             }
             .padding()
+        }
+        .onChange(of: authViewModel.isLoggedIn) { oldValue, newValue in
+            if newValue {
+                dismiss()
+            }
         }
     }
 }

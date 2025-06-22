@@ -2,15 +2,55 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var authViewModel: AuthViewModel
     @AppStorage("notificationsEnabled") private var notificationsEnabled = true
     @AppStorage("callSound") private var callSound = true
     @AppStorage("darkMode") private var darkMode = false
     @AppStorage("userName") private var userName = ""
     @StateObject private var purchaseManager = PurchaseManager.shared
+    @State private var showSubscriptionOptions = false
     
     var body: some View {
         NavigationView {
             List {
+                if !purchaseManager.isSubscribed {
+                    Section {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Image(systemName: "star.circle.fill")
+                                    .foregroundColor(.yellow)
+                                Text("Premium Features")
+                                    .font(.headline)
+                            }
+                            
+                            Text("• 20 minutes of call time")
+                            Text("• Schedule calls in advance")
+                            Text("• Custom conversation scenarios")
+                            Text("• Priority support")
+                            
+                            if let product = purchaseManager.products.first {
+                                Button(action: {
+                                    Task {
+                                        try? await purchaseManager.purchase()
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: "star.fill")
+                                        Text("Subscribe for \(product.displayPrice)")
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color("highlight"))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                                }
+                                .padding(.top)
+                            }
+                        }
+                        .padding()
+                    }
+                }
+                
                 Section("Notifications") {
                     Toggle("Enable Notifications", isOn: $notificationsEnabled)
                     Toggle("Call Sound", isOn: $callSound)
@@ -37,6 +77,7 @@ struct SettingsView: View {
                 
                 Section("Subscription") {
                     if !purchaseManager.isSubscribed {
+<<<<<<< HEAD
                         VStack(alignment: .leading, spacing: 8) {
                             if purchaseManager.isLoadingProducts {
                                 HStack {
@@ -105,6 +146,20 @@ struct SettingsView: View {
                     } else {
                         Text("Premium Subscription Active")
                             .foregroundColor(.green)
+=======
+                        Button(action: { showSubscriptionOptions = true }) {
+                            Label("Upgrade to Premium", systemImage: "star.fill")
+                                .foregroundColor(.yellow)
+                        }
+                    }
+                    
+                    Button(action: {
+                        Task {
+                            try? await purchaseManager.restorePurchases()
+                        }
+                    }) {
+                        Label("Restore Purchases", systemImage: "arrow.clockwise")
+>>>>>>> webrtc-integration
                     }
                 }
                 
@@ -125,9 +180,27 @@ struct SettingsView: View {
                     .foregroundColor(.red)
                     #endif
                 }
+                
+                Section("Account") {
+                    Button(role: .destructive, action: logout) {
+                        Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                }
             }
             .navigationTitle("Settings")
             .navigationBarItems(trailing: Button("Done") { dismiss() })
+            .alert("Upgrade to Premium", isPresented: $showSubscriptionOptions) {
+                if let product = purchaseManager.products.first {
+                    Button("Subscribe (\(product.displayPrice))", role: .none) {
+                        Task {
+                            try? await purchaseManager.purchase()
+                        }
+                    }
+                    Button("Cancel", role: .cancel) {}
+                }
+            } message: {
+                Text("Get unlimited calls and scheduling features!")
+            }
         }
         .navigationViewStyle(StackNavigationViewStyle())
         .onAppear {
@@ -135,6 +208,11 @@ struct SettingsView: View {
                 purchaseManager.loadProducts()
             }
         }
+    }
+    
+    private func logout() {
+        authViewModel.logout()
+        dismiss()
     }
     
     private func clearAllData() {
