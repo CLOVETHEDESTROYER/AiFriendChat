@@ -18,7 +18,11 @@ class PurchaseManager: NSObject, ObservableObject {
     private let maxTrialCalls = 2
     private let userDefaults = UserDefaults.standard
     private let callCountKey = "callsMadeCount"
+    
+    // Update to include both subscription options
     private let monthlySubscriptionId = "com.aifriendchat.monthly_subscription"
+    private let weeklySubscriptionId = "com.aifriendchat.weekly_subscription"
+    
     private var productRequest: SKProductsRequest?
 
     override init() {
@@ -34,7 +38,8 @@ class PurchaseManager: NSObject, ObservableObject {
         loadingError = nil
         products = []
         
-        let productIDs: Set<String> = [monthlySubscriptionId]
+        // Load both monthly and weekly subscriptions
+        let productIDs: Set<String> = [monthlySubscriptionId, weeklySubscriptionId]
         productRequest?.cancel() // Cancel any existing request
         
         let request = SKProductsRequest(productIdentifiers: productIDs)
@@ -90,6 +95,11 @@ class PurchaseManager: NSObject, ObservableObject {
         return UserDefaults.standard.bool(forKey: "hasActiveSubscription")
     }
     
+    // Helper method to get the preferred subscription product (weekly)
+    var preferredSubscriptionProduct: SKProduct? {
+        return products.first { $0.productIdentifier == weeklySubscriptionId } ?? products.first
+    }
+    
     // Add debug helper
     #if DEBUG
     func toggleDebugPremium() {
@@ -122,7 +132,9 @@ extension PurchaseManager: SKProductsRequestDelegate, SKPaymentTransactionObserv
         for transaction in transactions {
             switch transaction.transactionState {
             case .purchased, .restored:
-                if transaction.payment.productIdentifier == monthlySubscriptionId {
+                // Check if it's either monthly or weekly subscription
+                if transaction.payment.productIdentifier == monthlySubscriptionId || 
+                   transaction.payment.productIdentifier == weeklySubscriptionId {
                     DispatchQueue.main.async {
                         UserDefaults.standard.set(true, forKey: "hasActiveSubscription")
                         self.objectWillChange.send()

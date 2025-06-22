@@ -59,12 +59,43 @@ struct SettingsView: View {
                                     }
                                     .padding(.top, 4)
                                 }
-                            } else if let product = purchaseManager.products.first {
-                                Button(action: { 
-                                    purchaseManager.purchase(product: product)
-                                }) {
-                                    Text("Upgrade to Premium (\(product.priceLocale.currencySymbol ?? "$")\(product.price))")
+                            } else if let product = purchaseManager.preferredSubscriptionProduct {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text("Weekly Premium")
+                                            .font(.headline)
+                                        Spacer()
+                                        Text("\(product.priceLocale.currencySymbol ?? "$")\(product.price)/week")
+                                            .font(.headline)
+                                            .foregroundColor(.blue)
+                                    }
+                                    
+                                    Text("• Unlimited calls")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                    Text("• Call scheduling")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                    Text("• All scenarios")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                    
+                                    Button(action: { 
+                                        purchaseManager.purchase(product: product)
+                                    }) {
+                                        Text("Subscribe Now")
+                                            .frame(maxWidth: .infinity)
+                                            .padding()
+                                            .background(Color.blue)
+                                            .foregroundColor(.white)
+                                            .cornerRadius(8)
+                                    }
+                                    .padding(.top, 4)
                                 }
+                            } else {
+                                Text("No subscription options available")
+                                    .foregroundColor(.gray)
+                                    .font(.subheadline)
                             }
                         }
                         
@@ -97,14 +128,12 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .navigationBarItems(trailing: Button("Done") { dismiss() })
-            
-            Text("Select an option")
-                .font(.largeTitle)
-                .foregroundColor(.gray)
         }
-        .navigationViewStyle(DoubleColumnNavigationViewStyle())
+        .navigationViewStyle(StackNavigationViewStyle())
         .onAppear {
-            purchaseManager.loadProducts()
+            if !purchaseManager.isLoadingProducts && purchaseManager.products.isEmpty {
+                purchaseManager.loadProducts()
+            }
         }
     }
     

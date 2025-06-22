@@ -12,20 +12,17 @@ class CallViewModel: ObservableObject {
     @Published var isCallInProgress = false
     @Published var errorMessage: String?
     @Published var successMessage: String?
+    @Published var showUpgradePrompt = false
+    @Published var upgradeMessage = ""
     
-    private let baseURL: String = "https://voice.hyperlabsai.com"
+    private let backendService = BackendService.shared
     private let purchaseManager = PurchaseManager.shared
 
     func initiateCall(phoneNumber: String, scenario: String) {
         clearMessages()
 
-        guard purchaseManager.canMakeCall() else {
-            let remainingCalls = purchaseManager.getRemainingTrialCalls()
-            if remainingCalls == 0 {
-                setErrorMessage("You've used all your trial calls. Please subscribe to continue making calls.")
-            } else {
-                setErrorMessage("You have \(remainingCalls) trial calls remaining.")
-            }
+        guard !phoneNumber.isEmpty else {
+            setErrorMessage("Please enter a phone number.")
             return
         }
 
@@ -33,45 +30,67 @@ class CallViewModel: ObservableObject {
     }
 
     private func performCall(phoneNumber: String, scenario: String) {
-        guard let encodedPhoneNumber = phoneNumber.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-              let encodedScenario = scenario.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-              let url = URL(string: "\(baseURL)/make-call/\(encodedPhoneNumber)/\(encodedScenario)") else {
-            setErrorMessage("Invalid URL")
-            return
-        }
-
         isCallInProgress = true
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.addValue("Bearer \(KeychainManager.shared.getToken(forKey: "accessToken") ?? "")", forHTTPHeaderField: "Authorization")
-
-        print("Initiating call to URL: \(url.absoluteString)")
-
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                self.isCallInProgress = false
-                if let error = error {
-                    self.setErrorMessage("Network error: \(error.localizedDescription)")
-                } else if let httpResponse = response as? HTTPURLResponse {
-                    print("Received response with status code: \(httpResponse.statusCode)")
-                    switch httpResponse.statusCode {
-                    case 200:
-                        if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                            print("Server response: \(responseString)")
-                            self.setSuccessMessage("Call initiated successfully")
-                        }
-                    case 401:
-                        self.setErrorMessage("Unauthorized: Please log in again")
-                    default:
-                        self.setErrorMessage("Server error: Status code \(httpResponse.statusCode)")
+        Task {
+            do {
+                let response = try await backendService.makeCall(phoneNumber: phoneNumber, scenario: scenario)
+                
+                await MainActor.run {
+                    self.isCallInProgress = false
+                    self.setSuccessMessage("Call initiated successfully! Call SID: \(response.call_sid)")
+                    
+                    // Update local call count if not subscribed
+                    if !self.purchaseManager.isSubscribed {
+                        self.purchaseManager.incrementCallCount()
                     }
-                } else {
-                    self.setErrorMessage("Unknown error occurred")
+                }
+                
+            } catch BackendError.trialExhausted {
+                await MainActor.run {
+                    self.isCallInProgress = false
+                    self.upgradeMessage = "Your trial calls have been used. Upgrade to continue making calls!"
+                    self.showUpgradePrompt = true
+                }
+                
+            } catch BackendError.paymentRequired(let detail) {
+                await MainActor.run {
+                    self.isCallInProgress = false
+                    self.upgradeMessage = detail.message
+                    self.showUpgradePrompt = true
+                }
+                
+            } catch BackendError.permissionDenied(let message) {
+                await MainActor.run {
+                    self.isCallInProgress = false
+                    self.setErrorMessage(message)
+                }
+                
+            } catch BackendError.unauthorized {
+                await MainActor.run {
+                    self.isCallInProgress = false
+                    self.setErrorMessage("Authentication failed. Please log in again.")
+                }
+                
+            } catch BackendError.serverError {
+                await MainActor.run {
+                    self.isCallInProgress = false
+                    self.setErrorMessage("Server error. Please try again later.")
+                }
+                
+            } catch BackendError.networkError {
+                await MainActor.run {
+                    self.isCallInProgress = false
+                    self.setErrorMessage("Network connection error. Please check your internet connection.")
+                }
+                
+            } catch {
+                await MainActor.run {
+                    self.isCallInProgress = false
+                    self.setErrorMessage("Unexpected error: \(error.localizedDescription)")
                 }
             }
-        }.resume()
+        }
     }
 
     private func setErrorMessage(_ message: String) {

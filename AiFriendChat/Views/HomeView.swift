@@ -10,10 +10,12 @@ struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel: HomeViewModel
     @StateObject private var callViewModel = CallViewModel()
+    @StateObject private var backendService = BackendService.shared
     @State private var phoneNumber = ""
     @State private var selectedScenario = "default"
     @State private var userName = ""
     @State private var isUpdatingName = false
+    @State private var usageStats: UsageStats?
 
     // Notification state variables
     @State private var alertTitle = ""
@@ -68,12 +70,50 @@ struct HomeView: View {
                         .foregroundColor(.black)
                         .padding()
                     
-                    // Trial Status
-                    if !purchaseManager.isSubscribed{
-                        Text("Trial Calls Remaining: \(purchaseManager.getRemainingTrialCalls())")
-                            .font(.subheadline)
-                            .foregroundColor(.black)
-                            .padding(.horizontal)
+                    // Trial/Subscription Status
+                    if let stats = usageStats {
+                        VStack(spacing: 8) {
+                            if stats.is_subscribed {
+                                HStack {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                    Text("Premium Subscription Active")
+                                        .font(.headline)
+                                        .foregroundColor(.green)
+                                }
+                            } else if stats.is_trial_active {
+                                HStack {
+                                    Image(systemName: "clock.fill")
+                                        .foregroundColor(.orange)
+                                    Text("Trial Calls Remaining: \(stats.trial_calls_remaining)")
+                                        .font(.headline)
+                                        .foregroundColor(.black)
+                                }
+                            } else {
+                                HStack {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundColor(.red)
+                                    Text("Trial Expired")
+                                        .font(.headline)
+                                        .foregroundColor(.red)
+                                }
+                            }
+                            
+                            if stats.upgrade_recommended {
+                                Text("💡 Ready to upgrade?")
+                                    .font(.subheadline)
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                        .padding(.horizontal)
+                    } else {
+                        // Fallback to local purchase manager
+                        if !purchaseManager.isSubscribed {
+                            Text("Trial Calls Remaining: \(purchaseManager.getRemainingTrialCalls())")
+                                .font(.subheadline)
+                                .foregroundColor(.black)
+                                .padding(.horizontal)
+                        }
                     }
                     
                     // User Name Input
@@ -208,7 +248,7 @@ struct HomeView: View {
                             }) {
                                 HStack {
                                     Image(systemName: "star.fill")
-                                    Text("Upgrade to Premium")
+                                    Text("Upgrade to Weekly Premium")
                                 }
                                 .font(.headline)
                                 .foregroundColor(.white)
@@ -238,9 +278,9 @@ struct HomeView: View {
                     dismissButton: .default(Text("OK"))
                 )
             }
-            .alert("Upgrade to Premium", isPresented: $showSubscriptionAlert) {
-                if let product = purchaseManager.products.first {
-                    Button("Subscribe (\(product.priceLocale.currencySymbol ?? "$")\(product.price))", role: .none) {
+            .alert("Upgrade to Weekly Premium", isPresented: $showSubscriptionAlert) {
+                if let product = purchaseManager.preferredSubscriptionProduct {
+                    Button("Subscribe (\(product.priceLocale.currencySymbol ?? "$")\(product.price)/week)", role: .none) {
                         purchaseManager.purchase(product: product)
                     }
                     Button("Restore Purchases", role: .none) {
@@ -249,7 +289,7 @@ struct HomeView: View {
                     Button("Cancel", role: .cancel) {}
                 }
             } message: {
-                Text("Get unlimited calls and scheduling features!")
+                Text("Get unlimited calls and scheduling features with our Weekly Premium subscription!")
             }
             .alert("Premium Feature", isPresented: $showPremiumAlert) {
                 Button("Subscribe", role: .none) {
@@ -259,13 +299,21 @@ struct HomeView: View {
             } message: {
                 Text("Call scheduling is available for premium subscribers only.")
             }
-            .alert("Upgrade to Premium", isPresented: $showSubscriptionPrompt) {
+            .alert("Upgrade to Weekly Premium", isPresented: $showSubscriptionPrompt) {
                 Button("View Premium Features", role: .none) {
                     showSubscriptionAlert = true
                 }
                 Button("Maybe Later", role: .cancel) {}
             } message: {
-                Text("Schedule calls and get unlimited immediate calls with our premium subscription!")
+                Text("Schedule calls and get unlimited immediate calls with our Weekly Premium subscription!")
+            }
+            .alert("Upgrade Required", isPresented: $callViewModel.showUpgradePrompt) {
+                Button("Upgrade Now", role: .none) {
+                    showSubscriptionAlert = true
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(callViewModel.upgradeMessage)
             }
             .onChange(of: callViewModel.errorMessage) { newValue in
                 if let error = newValue {
@@ -280,6 +328,9 @@ struct HomeView: View {
                     alertMessage = success
                     showAlert = true
                 }
+            }
+            .onAppear {
+                loadUsageStats()
             }
             #if DEBUG
             .toolbar {
@@ -371,6 +422,20 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showCallHistory) {
                 CallHistoryView()
+            }
+        }
+    }
+    
+    private func loadUsageStats() {
+        Task {
+            do {
+                let stats = try await backendService.getUsageStats()
+                await MainActor.run {
+                    self.usageStats = stats
+                }
+            } catch {
+                print("Failed to load usage stats: \(error)")
+                // Keep using local purchase manager as fallback
             }
         }
     }
