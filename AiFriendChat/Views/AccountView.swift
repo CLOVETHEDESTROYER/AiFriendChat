@@ -1,9 +1,11 @@
 import SwiftUI
+import StoreKit
 
 struct AccountView: View {
-    @EnvironmentObject var authViewModel: AuthViewModel
     @Environment(\.dismiss) var dismiss
+    @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var purchaseManager = PurchaseManager.shared
+    
     @State private var showChangePassword = false
     @State private var showPrivacyPolicy = false
     @State private var showTerms = false
@@ -12,79 +14,55 @@ struct AccountView: View {
     
     var body: some View {
         NavigationView {
-            List {
-                Section("Profile") {
-                    HStack {
-                        Label("Email", systemImage: "envelope")
-                        Spacer()
-                        Text(authViewModel.user?.email ?? "Not available")
-                            .foregroundColor(.gray)
+            Form {
+                Section("Account Information") {
+                    if let user = authViewModel.currentUser {
+                        HStack {
+                            Text("Email")
+                            Spacer()
+                            Text(user.email)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        HStack {
+                            Text("Member Since")
+                            Spacer()
+                            Text(user.createdAt?.formatted(date: .abbreviated, time: .omitted) ?? "Unknown")
+                                .foregroundColor(.secondary)
+                        }
                     }
-                    
+                }
+                
+                Section("Subscription Status") {
                     HStack {
-                        Label("Subscription", systemImage: "star.circle")
+                        Text("Status")
                         Spacer()
-                        Text(purchaseManager.isSubscribed ? "Weekly Premium Active" : "Free Trial")
+                        Text(purchaseManager.isSubscribed ? "Premium" : "Free")
                             .foregroundColor(purchaseManager.isSubscribed ? .green : .orange)
                     }
                     
                     if !purchaseManager.isSubscribed {
                         HStack {
-                            Label("Trial Calls", systemImage: "phone.circle")
+                            Text("Trial Calls Remaining")
                             Spacer()
-                            Text("\(purchaseManager.getRemainingTrialCalls()) remaining")
-                                .foregroundColor(.orange)
+                            Text("\(purchaseManager.getRemainingTrialCalls())")
+                                .foregroundColor(.secondary)
                         }
-                    }
-                }
-                
-                Section("Subscription Information") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Weekly Premium")
-                                .font(.headline)
-                            Spacer()
-                            Text("$4.99/week")
-                                .font(.headline)
+                        
+                        Button(action: { showSubscriptionOptions = true }) {
+                            Label("Upgrade to Premium", systemImage: "star.fill")
                                 .foregroundColor(.blue)
                         }
-                        
-                        Text("• Unlimited calls")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                        Text("• Call scheduling")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                        Text("• All scenarios")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                        
-                        if !purchaseManager.isSubscribed {
-                            Button(action: { showSubscriptionOptions = true }) {
-                                Text("Upgrade to Weekly Premium")
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.blue)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(8)
-                            }
-                            .padding(.top, 8)
-                        }
+                        .padding(.top, 8)
                     }
-<<<<<<< HEAD
-                    .padding(.vertical, 4)
                 }
                 
                 Section("Subscription Management") {
-                    Button(action: { purchaseManager.restorePurchases() }) {
-=======
-                    
                     Button(action: {
                         Task {
                             try? await purchaseManager.restorePurchases()
                         }
                     }) {
->>>>>>> webrtc-integration
                         Label("Restore Purchases", systemImage: "arrow.clockwise")
                     }
                     
@@ -138,27 +116,20 @@ struct AccountView: View {
             .sheet(isPresented: $showTerms) {
                 TermsOfServiceView()
             }
-<<<<<<< HEAD
             .sheet(isPresented: $showEULA) {
                 EULAView()
             }
-            .alert("Upgrade to Weekly Premium", isPresented: $showSubscriptionOptions) {
-                if let product = purchaseManager.preferredSubscriptionProduct {
-                    Button("Subscribe (\(product.priceLocale.currencySymbol ?? "$")\(product.price)/week)", role: .none) {
-                        purchaseManager.purchase(product: product)
-=======
             .alert("Upgrade to Premium", isPresented: $showSubscriptionOptions) {
                 if let product = purchaseManager.products.first {
                     Button("Subscribe (\(product.displayPrice))", role: .none) {
                         Task {
                             try? await purchaseManager.purchase()
                         }
->>>>>>> webrtc-integration
                     }
                     Button("Cancel", role: .cancel) {}
                 }
             } message: {
-                Text("Get unlimited calls and scheduling features with our Weekly Premium subscription!")
+                Text("Get unlimited calls and scheduling features with our Premium subscription!")
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())
@@ -252,6 +223,37 @@ struct TermsOfServiceView: View {
                 .padding()
             }
             .navigationTitle("Terms of Service")
+            .navigationBarItems(trailing: Button("Done") { dismiss() })
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+}
+
+struct EULAView: View {
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("End User License Agreement")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .padding(.bottom)
+                    
+                    Text("""
+                    This End User License Agreement (EULA) is a legal agreement between you and Hyperlabs AI for the use of AI Friend Chat.
+                    
+                    By using this software, you agree to be bound by the terms of this EULA.
+                    
+                    For complete EULA, please contact support.
+                    """)
+                    
+                    Spacer()
+                }
+                .padding()
+            }
+            .navigationTitle("EULA")
             .navigationBarItems(trailing: Button("Done") { dismiss() })
         }
         .navigationViewStyle(StackNavigationViewStyle())

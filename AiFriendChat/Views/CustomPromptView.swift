@@ -258,8 +258,10 @@ struct CustomPromptView: View {
                 modelContext.delete(prompt)
                 try? modelContext.save()
             } catch {
-                errorMessage = error.localizedDescription
-                showAlert = true
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showAlert = true
+                }
             }
         }
     }

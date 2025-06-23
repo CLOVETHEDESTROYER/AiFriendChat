@@ -1,152 +1,35 @@
 import SwiftUI
+import StoreKit
 
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
-    @EnvironmentObject var authViewModel: AuthViewModel
-    @AppStorage("notificationsEnabled") private var notificationsEnabled = true
-    @AppStorage("callSound") private var callSound = true
-    @AppStorage("darkMode") private var darkMode = false
-    @AppStorage("userName") private var userName = ""
+    @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var purchaseManager = PurchaseManager.shared
     @State private var showSubscriptionOptions = false
     
     var body: some View {
         NavigationView {
-            List {
-                if !purchaseManager.isSubscribed {
-                    Section {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                Image(systemName: "star.circle.fill")
-                                    .foregroundColor(.yellow)
-                                Text("Premium Features")
-                                    .font(.headline)
-                            }
-                            
-                            Text("• 20 minutes of call time")
-                            Text("• Schedule calls in advance")
-                            Text("• Custom conversation scenarios")
-                            Text("• Priority support")
-                            
-                            if let product = purchaseManager.products.first {
-                                Button(action: {
-                                    Task {
-                                        try? await purchaseManager.purchase()
-                                    }
-                                }) {
-                                    HStack {
-                                        Image(systemName: "star.fill")
-                                        Text("Subscribe for \(product.displayPrice)")
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color("highlight"))
-                                    .foregroundColor(.white)
-                                    .cornerRadius(10)
-                                }
-                                .padding(.top)
-                            }
-                        }
-                        .padding()
+            Form {
+                Section("Call Preferences") {
+                    NavigationLink(destination: CallPreferencesView()) {
+                        Label("Call Settings", systemImage: "phone.circle")
+                    }
+                }
+                
+                Section("Appearance") {
+                    NavigationLink(destination: ThemeSettingsView()) {
+                        Label("Theme & Appearance", systemImage: "paintbrush")
                     }
                 }
                 
                 Section("Notifications") {
-                    Toggle("Enable Notifications", isOn: $notificationsEnabled)
-                    Toggle("Call Sound", isOn: $callSound)
-                }
-                
-                Section("Appearance") {
-                    Toggle("Dark Mode", isOn: $darkMode)
-                }
-                
-                Section("Call Settings") {
-                    if purchaseManager.isSubscribed {
-                        NavigationLink("Manage Call Preferences") {
-                            CallPreferencesView()
-                        }
-                    } else {
-                        HStack {
-                            Text("Call Preferences")
-                            Spacer()
-                            Text("Premium Only")
-                                .foregroundColor(.gray)
-                        }
+                    NavigationLink(destination: NotificationSettingsView()) {
+                        Label("Notification Settings", systemImage: "bell")
                     }
                 }
                 
                 Section("Subscription") {
                     if !purchaseManager.isSubscribed {
-<<<<<<< HEAD
-                        VStack(alignment: .leading, spacing: 8) {
-                            if purchaseManager.isLoadingProducts {
-                                HStack {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                    Text("Loading subscription options...")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                }
-                            } else if let error = purchaseManager.loadingError {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Unable to load subscription options")
-                                        .font(.subheadline)
-                                        .foregroundColor(.red)
-                                    Text(error)
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                    Button("Retry") {
-                                        purchaseManager.loadProducts()
-                                    }
-                                    .padding(.top, 4)
-                                }
-                            } else if let product = purchaseManager.preferredSubscriptionProduct {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack {
-                                        Text("Weekly Premium")
-                                            .font(.headline)
-                                        Spacer()
-                                        Text("\(product.priceLocale.currencySymbol ?? "$")\(product.price)/week")
-                                            .font(.headline)
-                                            .foregroundColor(.blue)
-                                    }
-                                    
-                                    Text("• Unlimited calls")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                    Text("• Call scheduling")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                    Text("• All scenarios")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                    
-                                    Button(action: { 
-                                        purchaseManager.purchase(product: product)
-                                    }) {
-                                        Text("Subscribe Now")
-                                            .frame(maxWidth: .infinity)
-                                            .padding()
-                                            .background(Color.blue)
-                                            .foregroundColor(.white)
-                                            .cornerRadius(8)
-                                    }
-                                    .padding(.top, 4)
-                                }
-                            } else {
-                                Text("No subscription options available")
-                                    .foregroundColor(.gray)
-                                    .font(.subheadline)
-                            }
-                        }
-                        
-                        Button(action: { purchaseManager.restorePurchases() }) {
-                            Text("Restore Purchases")
-                        }
-                    } else {
-                        Text("Premium Subscription Active")
-                            .foregroundColor(.green)
-=======
                         Button(action: { showSubscriptionOptions = true }) {
                             Label("Upgrade to Premium", systemImage: "star.fill")
                                 .foregroundColor(.yellow)
@@ -159,7 +42,6 @@ struct SettingsView: View {
                         }
                     }) {
                         Label("Restore Purchases", systemImage: "arrow.clockwise")
->>>>>>> webrtc-integration
                     }
                 }
                 
@@ -254,6 +136,45 @@ struct CallPreferencesView: View {
             }
         }
         .navigationTitle("Call Preferences")
+    }
+}
+
+struct ThemeSettingsView: View {
+    @Environment(\.dismiss) var dismiss
+    @AppStorage("selectedTheme") private var selectedTheme = "default"
+    
+    let themes = ["default", "dark", "light"]
+    
+    var body: some View {
+        Form {
+            Section("Theme") {
+                Picker("App Theme", selection: $selectedTheme) {
+                    ForEach(themes, id: \.self) { theme in
+                        Text(theme.capitalized)
+                            .tag(theme)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Theme Settings")
+    }
+}
+
+struct NotificationSettingsView: View {
+    @Environment(\.dismiss) var dismiss
+    @AppStorage("enableNotifications") private var enableNotifications = true
+    @AppStorage("callReminders") private var callReminders = true
+    @AppStorage("subscriptionUpdates") private var subscriptionUpdates = true
+    
+    var body: some View {
+        Form {
+            Section("Notifications") {
+                Toggle("Enable Notifications", isOn: $enableNotifications)
+                Toggle("Call Reminders", isOn: $callReminders)
+                Toggle("Subscription Updates", isOn: $subscriptionUpdates)
+            }
+        }
+        .navigationTitle("Notification Settings")
     }
 }
 

@@ -1,6 +1,6 @@
 import SwiftUI
 import SwiftData
-import os.log
+import os
 import StoreKit
 
 private enum Field: Hashable {
@@ -13,26 +13,15 @@ struct HomeView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel: HomeViewModel
-<<<<<<< HEAD
-    @StateObject private var callViewModel = CallViewModel()
-    @StateObject private var backendService = BackendService.shared
-=======
     @StateObject private var callViewModel: CallViewModel
     @StateObject private var purchaseManager = PurchaseManager.shared
     
     // MARK: - State Properties
->>>>>>> webrtc-integration
     @State private var phoneNumber = ""
     @State private var selectedScenario = "default"
     @State private var userName = ""
     @State private var isUpdatingName = false
-<<<<<<< HEAD
-    @State private var usageStats: UsageStats?
-
-    // Notification state variables
-=======
     @State private var showAlert = false
->>>>>>> webrtc-integration
     @State private var alertTitle = ""
     @State private var alertMessage = ""
     @State private var showPremiumAlert = false
@@ -53,10 +42,9 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-<<<<<<< HEAD
                 // Gradient background
                 LinearGradient(
-                    gradient: Gradient(colors: [Color("Color 1"), Color("Color 2")]),
+                    gradient: Gradient(colors: [Color("Color"), Color("Color 2")]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -66,52 +54,22 @@ struct HomeView: View {
                     // Header
                     Text("Welcome to AI Friend Chat")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundColor(.black)
+                        .foregroundColor(.white)
                         .padding()
                     
                     // Trial/Subscription Status
-                    if let stats = usageStats {
-                        VStack(spacing: 8) {
-                            if stats.is_subscribed {
-                                HStack {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
-                                    Text("Premium Subscription Active")
-                                        .font(.headline)
-                                        .foregroundColor(.green)
-                                }
-                            } else if stats.is_trial_active {
-                                HStack {
-                                    Image(systemName: "clock.fill")
-                                        .foregroundColor(.orange)
-                                    Text("Trial Calls Remaining: \(stats.trial_calls_remaining)")
-                                        .font(.headline)
-                                        .foregroundColor(.black)
-                                }
-                            } else {
-                                HStack {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundColor(.red)
-                                    Text("Trial Expired")
-                                        .font(.headline)
-                                        .foregroundColor(.red)
-                                }
-                            }
-                            
-                            if stats.upgrade_recommended {
-                                Text("💡 Ready to upgrade?")
-                                    .font(.subheadline)
-                                    .foregroundColor(.orange)
-                            }
-                        }
-                        .padding(.horizontal)
+                    if !purchaseManager.isSubscribed {
+                        Text("Trial Calls Remaining: \(purchaseManager.getRemainingTrialCalls())")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal)
                     } else {
-                        // Fallback to local purchase manager
-                        if !purchaseManager.isSubscribed {
-                            Text("Trial Calls Remaining: \(purchaseManager.getRemainingTrialCalls())")
-                                .font(.subheadline)
-                                .foregroundColor(.black)
-                                .padding(.horizontal)
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text("Premium Subscription Active")
+                                .font(.headline)
+                                .foregroundColor(.green)
                         }
                     }
                     
@@ -168,7 +126,7 @@ struct HomeView: View {
                     VStack(spacing: 10) {
                         Text("Select a Scenario")
                             .font(.headline)
-                            .foregroundColor(.black)
+                            .foregroundColor(.white)
                             .padding(.bottom, 10)
                         
                         let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
@@ -182,18 +140,18 @@ struct HomeView: View {
                                         Image(systemName: "hexagon.fill")
                                             .resizable()
                                             .frame(width: 30, height: 30)
-                                            .foregroundColor(selectedScenario == scenario ? .white : .black)
+                                            .foregroundColor(selectedScenario == scenario ? .white : .white)
                                             .scaleEffect(selectedScenario == scenario ? 1.2 : 1.0)
                                             .animation(.spring(), value: selectedScenario)
                                         
                                         Text(scenario.replacingOccurrences(of: "_", with: " ").capitalized)
                                             .font(.system(size: 14, weight: .bold))
-                                            .foregroundColor(selectedScenario == scenario ? .white : .black)
+                                            .foregroundColor(selectedScenario == scenario ? .white : .white)
                                             .multilineTextAlignment(.center)
                                     }
                                     .padding()
                                     .frame(width: 100, height: 100)
-                                    .background(selectedScenario == scenario ? Color("highlight") : Color.white.opacity(0.8))
+                                    .background(selectedScenario == scenario ? Color("highlight") : Color.white.opacity(0.2))
                                     .cornerRadius(15)
                                     .shadow(color: .gray.opacity(0.5), radius: 5, x: 0, y: 2)
                                 }
@@ -208,8 +166,8 @@ struct HomeView: View {
                             makeImmediateCall()
                         }) {
                             HStack {
-                                Image(systemName: "phone.arrow.up.right")
-                                Text("Make Immediate Call")
+                                Image(systemName: "phone.fill")
+                                Text("Make Call Now")
                             }
                             .font(.headline)
                             .foregroundColor(.white)
@@ -218,199 +176,142 @@ struct HomeView: View {
                             .background(Color("highlight"))
                             .cornerRadius(10)
                         }
-                        .disabled(phoneNumber.isEmpty || callViewModel.isCallInProgress)
+                        .padding(.horizontal, 20)
+                        .disabled(callViewModel.isCallInProgress)
                         
-                        NavigationLink(
-                            destination: ScheduleCallView(phoneNumber: phoneNumber, scenario: selectedScenario)
-                        ) {
+                        Button(action: {
+                            showCallHistory = true
+                        }) {
                             HStack {
-                                Image(systemName: "calendar.badge.plus")
-                                Text("Schedule Call")
+                                Image(systemName: "clock.arrow.circlepath")
+                                Text("Call History")
                             }
                             .font(.headline)
                             .foregroundColor(.white)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(purchaseManager.isSubscribed ? Color("AccentColor") : Color.gray)
+                            .background(Color.white.opacity(0.2))
                             .cornerRadius(10)
                         }
-                        .disabled(!purchaseManager.isSubscribed)
-                        .onTapGesture {
-                            if !purchaseManager.isSubscribed {
-                                showSubscriptionPrompt = true
-                            }
-                        }
-                        
-                        if !purchaseManager.isSubscribed {
-                            Button(action: {
-                                showSubscriptionAlert = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "star.fill")
-                                    Text("Upgrade to Weekly Premium")
-                                }
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.yellow)
-                                .cornerRadius(10)
-                            }
-                        }
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
-                }
-                .navigationTitle("")
-                .navigationBarItems(
-                    leading: Button("Logout") {
-                        authViewModel.logout()
-                    }
-                )
-                .onTapGesture {
-                    hideKeyboard()
+                    
+                    Spacer()
                 }
             }
-            .alert(isPresented: $showAlert) {
-                Alert(
-                    title: Text(alertTitle),
-                    message: Text(alertMessage),
-                    dismissButton: .default(Text("OK"))
-                )
-            }
-            .alert("Upgrade to Weekly Premium", isPresented: $showSubscriptionAlert) {
-                if let product = purchaseManager.preferredSubscriptionProduct {
-                    Button("Subscribe (\(product.priceLocale.currencySymbol ?? "$")\(product.price)/week)", role: .none) {
-                        purchaseManager.purchase(product: product)
+            .navigationTitle("AI Friend Chat")
+            .navigationBarItems(
+                leading: Button(action: { showAccountSheet = true }) {
+                    Image(systemName: "person.circle")
+                        .foregroundColor(.white)
+                },
+                trailing: HStack {
+                    Button(action: { showSettingsSheet = true }) {
+                        Image(systemName: "gearshape")
+                            .foregroundColor(.white)
                     }
-                    Button("Restore Purchases", role: .none) {
-                        purchaseManager.restorePurchases()
+                    Button(action: { showHelpSheet = true }) {
+                        Image(systemName: "questionmark.circle")
+                            .foregroundColor(.white)
+                    }
+                }
+            )
+            .sheet(isPresented: $showAccountSheet) {
+                AccountView()
+            }
+            .sheet(isPresented: $showSettingsSheet) {
+                SettingsView()
+            }
+            .sheet(isPresented: $showHelpSheet) {
+                HelpSupportView()
+            }
+            .sheet(isPresented: $showCallHistory) {
+                CallHistoryView()
+            }
+            .alert(alertTitle, isPresented: $showAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(alertMessage)
+            }
+            .alert("Upgrade to Premium", isPresented: $showSubscriptionPrompt) {
+                if let product = purchaseManager.products.first {
+                    Button("Subscribe (\(product.displayPrice))", role: .none) {
+                        Task {
+                            try? await purchaseManager.purchase()
+                        }
                     }
                     Button("Cancel", role: .cancel) {}
                 }
             } message: {
-                Text("Get unlimited calls and scheduling features with our Weekly Premium subscription!")
-            }
-            .alert("Premium Feature", isPresented: $showPremiumAlert) {
-                Button("Subscribe", role: .none) {
-                    showSubscriptionAlert = true
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Call scheduling is available for premium subscribers only.")
-            }
-            .alert("Upgrade to Weekly Premium", isPresented: $showSubscriptionPrompt) {
-                Button("View Premium Features", role: .none) {
-                    showSubscriptionAlert = true
-                }
-                Button("Maybe Later", role: .cancel) {}
-            } message: {
-                Text("Schedule calls and get unlimited immediate calls with our Weekly Premium subscription!")
-            }
-            .alert("Upgrade Required", isPresented: $callViewModel.showUpgradePrompt) {
-                Button("Upgrade Now", role: .none) {
-                    showSubscriptionAlert = true
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text(callViewModel.upgradeMessage)
-            }
-            .onChange(of: callViewModel.errorMessage) { newValue in
-                if let error = newValue {
-                    alertTitle = "Error"
-                    alertMessage = error
-                    showAlert = true
-                }
-            }
-            .onChange(of: callViewModel.successMessage) { newValue in
-                if let success = newValue {
-                    alertTitle = "Success"
-                    alertMessage = success
-                    showAlert = true
-                }
-            }
-            .onAppear {
-                loadUsageStats()
-            }
-            #if DEBUG
-=======
-                BackgroundView()
-                MainContentView(
-                    phoneNumber: $phoneNumber,
-                    selectedScenario: $selectedScenario,
-                    userName: $userName,
-                    activeField: _activeField.projectedValue,
-                    viewModel: viewModel,
-                    callViewModel: callViewModel,
-                    purchaseManager: purchaseManager,
-                    showSubscriptionPrompt: $showSubscriptionPrompt,
-                    showSubscriptionAlert: $showSubscriptionAlert
-                )
-            }
-            .navigationTitle("")
-            .navigationBarItems(leading: LogoutButton(authViewModel: authViewModel))
->>>>>>> webrtc-integration
-            .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    MenuButtons(
-                        showAccountSheet: $showAccountSheet,
-                        showCallHistory: $showCallHistory,
-                        showSettingsSheet: $showSettingsSheet,
-                        showHelpSheet: $showHelpSheet,
-                        showSubscriptionAlert: $showSubscriptionAlert,
-                        purchaseManager: purchaseManager,
-                        authViewModel: authViewModel
-                    )
-                }
+                Text("Get unlimited calls and scheduling features!")
             }
         }
-        .alert("Upgrade to Premium", isPresented: $showSubscriptionAlert) {
-            SubscriptionAlertButtons(purchaseManager: purchaseManager)
-        } message: {
-            Text("Get unlimited calls and scheduling features!")
-        }
-        .alert("Premium Feature", isPresented: $showPremiumAlert) {
-            PremiumAlertButtons(showSubscriptionAlert: $showSubscriptionAlert)
-        } message: {
-            Text("Call scheduling is available for premium subscribers only.")
-        }
-        .onChange(of: callViewModel.errorMessage) { oldValue, newValue in
-            handleCallViewModelError(newValue)
-        }
-        .onChange(of: callViewModel.successMessage) { oldValue, newValue in
-            handleCallViewModelSuccess(newValue)
+        .onAppear {
+            loadUserData()
         }
     }
     
-<<<<<<< HEAD
-    private func loadUsageStats() {
+    // MARK: - Helper Methods
+    private func loadUserData() {
+        userName = UserDefaults.standard.string(forKey: "userName") ?? ""
+    }
+    
+    private func updateUserName() {
+        guard !userName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            alertTitle = "Error"
+            alertMessage = "Please enter a valid name"
+            showAlert = true
+            return
+        }
+        
+        isUpdatingName = true
+        
         Task {
             do {
-                let stats = try await backendService.getUsageStats()
+                try await viewModel.updateUserName(userName)
                 await MainActor.run {
-                    self.usageStats = stats
+                    UserDefaults.standard.set(userName, forKey: "userName")
+                    isUpdatingName = false
+                    alertTitle = "Success"
+                    alertMessage = "Name updated successfully!"
+                    showAlert = true
                 }
             } catch {
-                print("Failed to load usage stats: \(error)")
-                // Keep using local purchase manager as fallback
+                await MainActor.run {
+                    isUpdatingName = false
+                    alertTitle = "Error"
+                    alertMessage = error.localizedDescription
+                    showAlert = true
+                }
             }
         }
     }
     
     private func makeImmediateCall() {
-        guard !phoneNumber.isEmpty else {
-=======
-    // MARK: - Helper Views and Methods
-    private func handleCallViewModelError(_ error: String?) {
-        if let error = error {
->>>>>>> webrtc-integration
+        guard !phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             alertTitle = "Error"
+            alertMessage = "Please enter a phone number"
+            showAlert = true
+            return
+        }
+        
+        callViewModel.initiateCall(phoneNumber: phoneNumber, scenario: selectedScenario)
+    }
+    
+    private func hideKeyboard() {
+        activeField = nil
+    }
+    
+    private func handleCallViewModelError() {
+        if let error = callViewModel.errorMessage {
+            alertTitle = "Call Error"
             alertMessage = error
             showAlert = true
         }
     }
     
-    private func handleCallViewModelSuccess(_ success: String?) {
-        if let success = success {
+    private func handleCallViewModelSuccess() {
+        if let success = callViewModel.successMessage {
             alertTitle = "Success"
             alertMessage = success
             showAlert = true
@@ -418,200 +319,25 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Supporting Views
-private struct BackgroundView: View {
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(colors: [Color("Color"), Color("Color 2")]),
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .edgesIgnoringSafeArea(.all)
-    }
+// MARK: - Supporting Types
+enum Field {
+    case userName
+    case phoneNumber
 }
 
-private struct SubscriptionAlertButtons: View {
-    @ObservedObject var purchaseManager: PurchaseManager
-    
-    var body: some View {
-        Group {
-            if let product = purchaseManager.products.first {
-                Button("Subscribe (\(product.displayPrice))", role: .none) {
-                    Task {
-                        try? await purchaseManager.purchase()
-                    }
-                }
-                Button("Restore Purchases", role: .none) {
-                    Task {
-                        try? await purchaseManager.restorePurchases()
-                    }
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        }
-    }
-}
+let scenarios = [
+    "default",
+    "sister_emergency", 
+    "mother_emergency",
+    "yacht_party",
+    "instigator",
+    "gameshow_host"
+]
 
-private struct MainContentView: View {
-    @Binding var phoneNumber: String
-    @Binding var selectedScenario: String
-    @Binding var userName: String
-    @FocusState.Binding var activeField: Field?
-    @ObservedObject var viewModel: HomeViewModel
-    @ObservedObject var callViewModel: CallViewModel
-    @ObservedObject var purchaseManager: PurchaseManager
-    @Binding var showSubscriptionPrompt: Bool
-    @Binding var showSubscriptionAlert: Bool
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 25) {
-                Text("Welcome to AI Friend Chat")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.center)
-                    .padding(.top)
-                
-                CallInputSection(
-                    phoneNumber: $phoneNumber,
-                    selectedScenario: $selectedScenario,
-                    userName: $userName,
-                    activeField: $activeField,
-                    viewModel: viewModel,
-                    callViewModel: callViewModel,
-                    purchaseManager: purchaseManager
-                )
-            }
-            .padding()
-        }
-    }
+#Preview {
+    HomeView(modelContext: try! ModelContainer(for: User.self).mainContext)
+        .environmentObject(AuthViewModel())
 }
-
-private struct LogoutButton: View {
-    @ObservedObject var authViewModel: AuthViewModel
-    
-    var body: some View {
-        Button {
-            Task {
-                authViewModel.logout()
-            }
-        } label: {
-            Text("Logout")
-                .foregroundColor(.white)
-        }
-    }
-}
-
-private struct PremiumAlertButtons: View {
-    @Binding var showSubscriptionAlert: Bool
-    
-    var body: some View {
-        Button("Subscribe", role: .none) {
-            showSubscriptionAlert = true
-        }
-        Button("Cancel", role: .cancel) {}
-    }
-}
-
-private struct MenuButtons: View {
-    @Binding var showAccountSheet: Bool
-    @Binding var showCallHistory: Bool
-    @Binding var showSettingsSheet: Bool
-    @Binding var showHelpSheet: Bool
-    @Binding var showSubscriptionAlert: Bool
-    @ObservedObject var purchaseManager: PurchaseManager
-    @ObservedObject var authViewModel: AuthViewModel
-    
-    var body: some View {
-        Menu {
-            Button(action: { showAccountSheet = true }) {
-                Label("Account", systemImage: "person.circle")
-            }
-            Button(action: { showCallHistory = true }) {
-                Label("Call History", systemImage: "clock")
-            }
-            Button(action: { showSettingsSheet = true }) {
-                Label("Settings", systemImage: "gear")
-            }
-            Button(action: { showHelpSheet = true }) {
-                Label("Help", systemImage: "questionmark.circle")
-            }
-            
-            if !purchaseManager.isSubscribed {
-                Button(action: { showSubscriptionAlert = true }) {
-                    Label("Upgrade to Premium", systemImage: "star.fill")
-                }
-            }
-            
-            Divider()
-            
-            Button(role: .destructive, action: {
-                authViewModel.logout()
-            }) {
-                Label("Logout", systemImage: "rectangle.portrait.and.arrow.right")
-            }
-            
-            #if DEBUG
-            Menu("Debug") {
-                Button("Toggle Premium") {
-                    purchaseManager.toggleDebugPremium()
-                }
-            }
-            #endif
-        } label: {
-            Image(systemName: "ellipsis.circle")
-                .foregroundColor(.white)
-        }
-    }
-}
-
-private struct CallInputSection: View {
-    @Binding var phoneNumber: String
-    @Binding var selectedScenario: String
-    @Binding var userName: String
-    @FocusState.Binding var activeField: Field?
-    @ObservedObject var viewModel: HomeViewModel
-    @ObservedObject var callViewModel: CallViewModel
-    @ObservedObject var purchaseManager: PurchaseManager
-    
-    var body: some View {
-        VStack(spacing: 15) {
-            TextField("Phone Number", text: $phoneNumber)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .keyboardType(.phonePad)
-                .focused($activeField, equals: .phoneNumber)
-            
-            Picker("Scenario", selection: $selectedScenario) {
-                ForEach(scenarios, id: \.self) { scenario in
-                    Text(scenario.replacingOccurrences(of: "_", with: " ").capitalized)
-                        .tag(scenario)
-                }
-            }
-            .pickerStyle(MenuPickerStyle())
-            
-            Button(action: makeCall) {
-                Text("Make Call")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .cornerRadius(10)
-            }
-        }
-        .padding()
-    }
-    
-    private var scenarios: [String] {
-        ["default", "sister_emergency", "mother_emergency", "yacht_party", "instigator", "gameshow_host"]
-    }
-    
-    private func makeCall() {
-        callViewModel.initiateCall(phoneNumber: phoneNumber, scenario: selectedScenario)
-    }
-}
-
-// Additional supporting view structs would go here...
 
 
 

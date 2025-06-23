@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import SwiftUICore
+import SwiftUI
 import SwiftData
 
 @MainActor
@@ -14,10 +14,10 @@ class CallViewModel: ObservableObject {
     @Published var isCallInProgress = false
     @Published var errorMessage: String?
     @Published var successMessage: String?
+    @Published var upgradeMessage: String?
     @Published var showUpgradePrompt = false
-    @Published var upgradeMessage = ""
     
-    private let backendService = BackendService.shared
+    private let backendService = CallService.shared
     private let purchaseManager = PurchaseManager.shared
     private let modelContext: ModelContext
     
@@ -27,12 +27,11 @@ class CallViewModel: ObservableObject {
 
     func initiateCall(phoneNumber: String, scenario: String) {
         clearMessages()
-<<<<<<< HEAD
 
         guard !phoneNumber.isEmpty else {
             setErrorMessage("Please enter a phone number.")
             return
-=======
+        }
         
         Task {
             // First check if user can make call
@@ -76,24 +75,21 @@ class CallViewModel: ObservableObject {
                 } catch {
                     // If call fails, decrement the count
                     if !purchaseManager.isSubscribed {
-                        // Add method to decrement call count
                         purchaseManager.decrementCallCount()
                     }
                     setErrorMessage(error.localizedDescription)
                     logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
                 }
             } else {
-                // Handle regular scenarios as before
+                // Handle regular scenarios
                 performCall(phoneNumber: phoneNumber, scenario: scenario)
             }
->>>>>>> webrtc-integration
         }
     }
 
     private func performCall(phoneNumber: String, scenario: String) {
         isCallInProgress = true
 
-<<<<<<< HEAD
         Task {
             do {
                 let response = try await backendService.makeCall(phoneNumber: phoneNumber, scenario: scenario)
@@ -101,41 +97,6 @@ class CallViewModel: ObservableObject {
                 await MainActor.run {
                     self.isCallInProgress = false
                     self.setSuccessMessage("Call initiated successfully! Call SID: \(response.call_sid)")
-                    
-                    // Update local call count if not subscribed
-                    if !self.purchaseManager.isSubscribed {
-                        self.purchaseManager.incrementCallCount()
-=======
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.addValue("Bearer \(KeychainManager.shared.getToken(forKey: "accessToken") ?? "")", forHTTPHeaderField: "Authorization")
-
-        print("Initiating call to URL: \(url.absoluteString)")
-
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                self.isCallInProgress = false
-                if let error = error {
-                    self.setErrorMessage("Network error: \(error.localizedDescription)")
-                    self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
-                } else if let httpResponse = response as? HTTPURLResponse {
-                    print("Received response with status code: \(httpResponse.statusCode)")
-                    switch httpResponse.statusCode {
-                    case 200:
-                        if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                            print("Server response: \(responseString)")
-                            self.setSuccessMessage("Call initiated successfully")
-                            self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .completed)
-                        }
-                    case 401:
-                        self.setErrorMessage("Unauthorized: Please log in again")
-                        self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
-                    default:
-                        self.setErrorMessage("Server error: Status code \(httpResponse.statusCode)")
-                        self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
->>>>>>> webrtc-integration
-                    }
                 }
                 
             } catch BackendError.trialExhausted {
