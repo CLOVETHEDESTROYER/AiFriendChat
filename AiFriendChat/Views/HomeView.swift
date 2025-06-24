@@ -320,11 +320,6 @@ struct HomeView: View {
 }
 
 // MARK: - Supporting Types
-enum Field {
-    case userName
-    case phoneNumber
-}
-
 let scenarios = [
     "default",
     "sister_emergency", 
