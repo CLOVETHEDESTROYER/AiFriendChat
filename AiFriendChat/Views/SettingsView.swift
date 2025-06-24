@@ -86,8 +86,10 @@ struct SettingsView: View {
         }
         .navigationViewStyle(StackNavigationViewStyle())
         .onAppear {
-            if !purchaseManager.isLoadingProducts && purchaseManager.products.isEmpty {
-                purchaseManager.loadProducts()
+            if purchaseManager.products.isEmpty {
+                Task {
+                    await purchaseManager.fetchProducts()
+                }
             }
         }
     }
