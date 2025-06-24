@@ -268,7 +268,7 @@ struct HomeView: View {
         
         Task {
             do {
-                try await viewModel.updateUserName(userName)
+                try await viewModel.updateUserName(to: userName)
                 await MainActor.run {
                     UserDefaults.standard.set(userName, forKey: "userName")
                     isUpdatingName = false
