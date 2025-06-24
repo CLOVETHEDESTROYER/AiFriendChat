@@ -92,11 +92,11 @@ class CallViewModel: ObservableObject {
 
         Task {
             do {
-                let response = try await backendService.makeCall(phoneNumber: phoneNumber, scenario: scenario)
+                let response = try await CallService.shared.makeCall(phoneNumber: phoneNumber, scenario: scenario)
                 
                 await MainActor.run {
                     self.isCallInProgress = false
-                    self.setSuccessMessage("Call initiated successfully! Call SID: \(response.call_sid)")
+                    self.setSuccessMessage("Call initiated successfully!")
                 }
                 
             } catch BackendError.trialExhausted {

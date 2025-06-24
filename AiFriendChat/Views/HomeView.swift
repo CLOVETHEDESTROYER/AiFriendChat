@@ -335,7 +335,7 @@ let scenarios = [
 ]
 
 #Preview {
-    HomeView(modelContext: try! ModelContainer(for: User.self).mainContext)
+    HomeView(modelContext: try! ModelContainer(for: CallHistory.self).mainContext)
         .environmentObject(AuthViewModel())
 }
 
