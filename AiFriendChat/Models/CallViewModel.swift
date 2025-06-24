@@ -99,48 +99,24 @@ class CallViewModel: ObservableObject {
                     self.setSuccessMessage("Call initiated successfully!")
                 }
                 
-            } catch BackendError.trialExhausted {
-                await MainActor.run {
-                    self.isCallInProgress = false
-                    self.upgradeMessage = "Your trial calls have been used. Upgrade to continue making calls!"
-                    self.showUpgradePrompt = true
-                }
-                
-            } catch BackendError.paymentRequired(let detail) {
-                await MainActor.run {
-                    self.isCallInProgress = false
-                    self.upgradeMessage = detail.message
-                    self.showUpgradePrompt = true
-                }
-                
-            } catch BackendError.permissionDenied(let message) {
-                await MainActor.run {
-                    self.isCallInProgress = false
-                    self.setErrorMessage(message)
-                }
-                
-            } catch BackendError.unauthorized {
-                await MainActor.run {
-                    self.isCallInProgress = false
-                    self.setErrorMessage("Authentication failed. Please log in again.")
-                }
-                
-            } catch BackendError.serverError {
-                await MainActor.run {
-                    self.isCallInProgress = false
-                    self.setErrorMessage("Server error. Please try again later.")
-                }
-                
-            } catch BackendError.networkError {
-                await MainActor.run {
-                    self.isCallInProgress = false
-                    self.setErrorMessage("Network connection error. Please check your internet connection.")
-                }
-                
             } catch {
                 await MainActor.run {
                     self.isCallInProgress = false
-                    self.setErrorMessage("Unexpected error: \(error.localizedDescription)")
+                    
+                    // Handle specific error messages
+                    let errorMessage = error.localizedDescription
+                    if errorMessage.contains("trial calls") || errorMessage.contains("subscribe") {
+                        self.upgradeMessage = errorMessage
+                        self.showUpgradePrompt = true
+                    } else if errorMessage.contains("authentication") || errorMessage.contains("unauthorized") {
+                        self.setErrorMessage("Authentication failed. Please log in again.")
+                    } else if errorMessage.contains("server") {
+                        self.setErrorMessage("Server error. Please try again later.")
+                    } else if errorMessage.contains("network") {
+                        self.setErrorMessage("Network connection error. Please check your internet connection.")
+                    } else {
+                        self.setErrorMessage("Unexpected error: \(errorMessage)")
+                    }
                 }
             }
         }
