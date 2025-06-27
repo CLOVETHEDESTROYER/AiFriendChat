@@ -66,7 +66,9 @@ struct CallView: View {
                         // Trial Status in a more compact form
                         if !purchaseManager.isSubscribed {
                             HStack {
-                                Text("Trial Calls: \(purchaseManager.getRemainingTrialCalls())")
+                                Text(purchaseManager.isSubscribed ? 
+                                     "Call Time: \(purchaseManager.getRemainingTimeDisplay())" : 
+                                     "Trial Calls: \(purchaseManager.getRemainingTrialCalls())")
                                     .font(.subheadline)
                                     .foregroundColor(.white)
                                 Spacer()

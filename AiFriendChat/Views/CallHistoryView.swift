@@ -98,6 +98,12 @@ private struct CallHistoryCard: View {
             Text("Scenario: \(call.scenario)")
                 .font(.subheadline)
             
+            if call.duration > 0 {
+                Text("Duration: \(formatDuration(call.duration))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
             HStack {
                 Spacer()
                 StatusBadge(status: call.status)
@@ -125,6 +131,17 @@ private struct CallHistoryCard: View {
         formatter.dateStyle = .short
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration / 60)
+        let seconds = Int(duration.truncatingRemainder(dividingBy: 60))
+        
+        if minutes > 0 {
+            return "\(minutes)m \(seconds)s"
+        } else {
+            return "\(seconds)s"
+        }
     }
 }
 

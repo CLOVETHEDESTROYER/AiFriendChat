@@ -15,15 +15,24 @@ class PurchaseManager: ObservableObject {
     
     private let productId = "com.aifriendchat.monthly_subscription"
     private let trialCallsLimit = 1
+    private let monthlyCallTimeLimit: TimeInterval = 20 * 60 // 20 minutes in seconds
+    private let weeklyCallTimeLimit: TimeInterval = 20 * 60 // 20 minutes in seconds
     
     @Published private(set) var products: [Product] = []
     @Published private(set) var purchasedProducts: Set<String> = []
     @Published private(set) var isSubscribed = false
+    @Published private(set) var subscriptionType: SubscriptionType = .none
     
     private var updateListenerTask: Task<Void, Error>?
     
-    private let callCountQueue = DispatchQueue(label: "com.aifriendchat.callcount")
+    private let callTimeQueue = DispatchQueue(label: "com.aifriendchat.calltime")
     private let defaults = UserDefaults.standard
+    
+    enum SubscriptionType {
+        case none
+        case weekly
+        case monthly
+    }
     
     init() {
         updateListenerTask = listenForTransactions()
@@ -41,14 +50,15 @@ class PurchaseManager: ObservableObject {
         updateListenerTask?.cancel()
     }
     
+    // MARK: - Trial Call Tracking
     var callsMade: Int {
-        callCountQueue.sync {
+        callTimeQueue.sync {
             defaults.integer(forKey: "callsMadeCount")
         }
     }
     
     func incrementCallCount() {
-        callCountQueue.sync {
+        callTimeQueue.sync {
             let currentCount = defaults.integer(forKey: "callsMadeCount")
             defaults.set(currentCount + 1, forKey: "callsMadeCount")
             DispatchQueue.main.async {
@@ -58,7 +68,7 @@ class PurchaseManager: ObservableObject {
     }
     
     func decrementCallCount() {
-        callCountQueue.sync {
+        callTimeQueue.sync {
             let currentCount = defaults.integer(forKey: "callsMadeCount")
             if currentCount > 0 {
                 defaults.set(currentCount - 1, forKey: "callsMadeCount")
@@ -73,21 +83,98 @@ class PurchaseManager: ObservableObject {
         return max(0, trialCallsLimit - callsMade)
     }
     
-    private func updateSubscriptionStatus() async throws {
-        for await result in Transaction.currentEntitlements {
-            let transaction = try result.payloadValue
-            await handle(transaction: transaction)
+    // MARK: - Call Time Tracking
+    var totalCallTimeThisPeriod: TimeInterval {
+        callTimeQueue.sync {
+            let key = getCurrentPeriodKey()
+            return defaults.double(forKey: key)
         }
     }
     
+    var remainingCallTime: TimeInterval {
+        if !isSubscribed {
+            return 0
+        }
+        
+        let limit = subscriptionType == .weekly ? weeklyCallTimeLimit : monthlyCallTimeLimit
+        return max(0, limit - totalCallTimeThisPeriod)
+    }
+    
+    func addCallTime(_ duration: TimeInterval) {
+        callTimeQueue.sync {
+            let key = getCurrentPeriodKey()
+            let currentTime = defaults.double(forKey: key)
+            defaults.set(currentTime + duration, forKey: key)
+            DispatchQueue.main.async {
+                self.objectWillChange.send()
+            }
+        }
+    }
+    
+    private func getCurrentPeriodKey() -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if subscriptionType == .weekly {
+            let weekOfYear = calendar.component(.weekOfYear, from: now)
+            let year = calendar.component(.year, from: now)
+            return "callTime_week_\(year)_\(weekOfYear)"
+        } else {
+            let month = calendar.component(.month, from: now)
+            let year = calendar.component(.year, from: now)
+            return "callTime_month_\(year)_\(month)"
+        }
+    }
+    
+    // MARK: - Call Permission Checks
     func canMakeCall() async throws -> Bool {
         try await updateSubscriptionStatus()
-        return isSubscribed || getRemainingTrialCalls() > 0
+        
+        if isSubscribed {
+            return remainingCallTime > 0
+        } else {
+            return getRemainingTrialCalls() > 0
+        }
     }
     
     func canScheduleCall() async throws -> Bool {
         try await updateSubscriptionStatus()
         return isSubscribed
+    }
+    
+    // MARK: - Display Methods
+    func getRemainingTimeDisplay() -> String {
+        if !isSubscribed {
+            return "\(getRemainingTrialCalls()) trial calls"
+        }
+        
+        let minutes = Int(remainingCallTime / 60)
+        let seconds = Int(remainingCallTime.truncatingRemainder(dividingBy: 60))
+        
+        if minutes > 0 {
+            return "\(minutes)m \(seconds)s remaining"
+        } else {
+            return "\(seconds)s remaining"
+        }
+    }
+    
+    func getTotalTimeUsedDisplay() -> String {
+        let minutes = Int(totalCallTimeThisPeriod / 60)
+        let seconds = Int(totalCallTimeThisPeriod.truncatingRemainder(dividingBy: 60))
+        
+        if minutes > 0 {
+            return "\(minutes)m \(seconds)s used"
+        } else {
+            return "\(seconds)s used"
+        }
+    }
+    
+    // MARK: - Subscription Management
+    private func updateSubscriptionStatus() async throws {
+        for await result in Transaction.currentEntitlements {
+            let transaction = try result.payloadValue
+            await handle(transaction: transaction)
+        }
     }
     
     private func listenForTransactions() -> Task<Void, Error> {
@@ -111,9 +198,16 @@ class PurchaseManager: ObservableObject {
         case .some(_):
             purchasedProducts.remove(productId)
             isSubscribed = false
+            subscriptionType = .none
         case .none:
             purchasedProducts.insert(productId)
             isSubscribed = true
+            // Determine subscription type based on product ID
+            if productId.contains("weekly") {
+                subscriptionType = .weekly
+            } else {
+                subscriptionType = .monthly
+            }
         }
         
         await transaction.finish()
@@ -164,7 +258,16 @@ class PurchaseManager: ObservableObject {
     #if DEBUG
     func toggleDebugPremium() {
         isSubscribed.toggle()
+        if isSubscribed {
+            subscriptionType = .monthly
+        } else {
+            subscriptionType = .none
+        }
         objectWillChange.send()
+    }
+    
+    func addTestCallTime(_ minutes: Double) {
+        addCallTime(minutes * 60)
     }
     #endif
 }

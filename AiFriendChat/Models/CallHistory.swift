@@ -9,13 +9,15 @@ final class CallHistory {
     var scenario: String
     var timestamp: Date
     var status: CallStatus
+    var duration: TimeInterval // New field for call duration
     
-    init(phoneNumber: String, scenario: String, status: CallStatus) {
+    init(phoneNumber: String, scenario: String, status: CallStatus, duration: TimeInterval = 0) {
         self.id = UUID()
         self.phoneNumber = phoneNumber
         self.scenario = scenario
         self.timestamp = Date()
         self.status = status
+        self.duration = duration
     }
 }
 

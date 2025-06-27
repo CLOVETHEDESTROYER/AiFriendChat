@@ -3,7 +3,7 @@ import StoreKit
 
 struct AccountView: View {
     @Environment(\.dismiss) var dismiss
-    @StateObject private var authViewModel = AuthViewModel()
+    @EnvironmentObject var authViewModel: AuthViewModel
     @StateObject private var purchaseManager = PurchaseManager.shared
     
     @State private var showChangePassword = false
@@ -16,7 +16,7 @@ struct AccountView: View {
         NavigationView {
             Form {
                 Section("Account Information") {
-                    if let user = authViewModel.currentUser {
+                    if let user = authViewModel.user {
                         HStack {
                             Text("Email")
                             Spacer()
@@ -25,9 +25,9 @@ struct AccountView: View {
                         }
                         
                         HStack {
-                            Text("Member Since")
+                            Text("User ID")
                             Spacer()
-                            Text(user.createdAt?.formatted(date: .abbreviated, time: .omitted) ?? "Unknown")
+                            Text(user.id)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -136,7 +136,7 @@ struct AccountView: View {
     }
 }
 
-// Placeholder views - implement these based on your needs
+// Placeholder views - these should be moved to separate files
 struct ChangePasswordView: View {
     @Environment(\.dismiss) var dismiss
     
@@ -258,4 +258,9 @@ struct EULAView: View {
         }
         .navigationViewStyle(StackNavigationViewStyle())
     }
+}
+
+#Preview {
+    AccountView()
+        .environmentObject(AuthViewModel())
 } 

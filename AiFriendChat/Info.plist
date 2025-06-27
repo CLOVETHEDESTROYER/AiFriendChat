@@ -4,12 +4,19 @@
 <dict>
 	<key>BaseURL</key>
 	<string>https://voice.hyperlabsai.com</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access to make AI-powered phone calls and voice interactions.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
+			<key>voice.hyperlabsai.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
 			<key>164.92.71.74</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>

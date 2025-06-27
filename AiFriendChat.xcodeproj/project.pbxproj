@@ -45,9 +45,9 @@
 		9D6013022D48926F00F566C2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D6012FF2D48926F00F566C2 /* SettingsView.swift */; };
 		9D6013032D48926F00F566C2 /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D6012FE2D48926F00F566C2 /* HelpSupportView.swift */; };
 		9DDE9E212D57C384009FBE55 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DDE9E1F2D57C384009FBE55 /* PurchaseManager.swift */; };
-		9DDE9E232D57C685009FBE55 /* Configuration.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 9DDE9E222D57C685009FBE55 /* Configuration.storekit */; };
 		9DDE9E252D586585009FBE55 /* CallHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DDE9E242D586585009FBE55 /* CallHistory.swift */; };
 		9DFC07D62D5BDCB700E88B1B /* SavedPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DFC07D52D5BDCB700E88B1B /* SavedPrompt.swift */; };
+		C089B0F42E0F32180034854F /* Configuration.storekit in Resources */ = {isa = PBXBuildFile; fileRef = C089B0F32E0F32180034854F /* Configuration.storekit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -111,9 +111,9 @@
 		9D6012FE2D48926F00F566C2 /* HelpSupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpSupportView.swift; sourceTree = "<group>"; };
 		9D6012FF2D48926F00F566C2 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		9DDE9E1F2D57C384009FBE55 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
-		9DDE9E222D57C685009FBE55 /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
 		9DDE9E242D586585009FBE55 /* CallHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallHistory.swift; sourceTree = "<group>"; };
 		9DFC07D52D5BDCB700E88B1B /* SavedPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPrompt.swift; sourceTree = "<group>"; };
+		C089B0F32E0F32180034854F /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -239,7 +239,6 @@
 		9D1E6C6C2D418B80004F7125 /* AiFriendChat */ = {
 			isa = PBXGroup;
 			children = (
-				9DDE9E222D57C685009FBE55 /* Configuration.storekit */,
 				9DDE9E202D57C384009FBE55 /* InAppPurchases */,
 				9D1E6C4A2D418B80004F7125 /* App */,
 				9D1E6C522D418B80004F7125 /* Models */,
@@ -269,6 +268,7 @@
 		9D2790B62CC46BCC0025F8A1 = {
 			isa = PBXGroup;
 			children = (
+				C089B0F32E0F32180034854F /* Configuration.storekit */,
 				9D33C88A2CEF902200902E96 /* File.txt */,
 				9D1E6C6C2D418B80004F7125 /* AiFriendChat */,
 				9D2790D62CC46BCD0025F8A1 /* AiFriendChatTests */,
@@ -422,7 +422,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9D1E6C6D2D418B80004F7125 /* Assets.xcassets in Resources */,
-				9DDE9E232D57C685009FBE55 /* Configuration.storekit in Resources */,
+				C089B0F42E0F32180034854F /* Configuration.storekit in Resources */,
 				9D1E6C6E2D418B80004F7125 /* Preview Assets.xcassets in Resources */,
 				9D33C88B2CEF902200902E96 /* File.txt in Resources */,
 			);
@@ -527,7 +527,7 @@
 				CODE_SIGN_ENTITLEMENTS = AiFriendChat/AiFriendChat.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "\"AiFriendChat/Preview Content\"";
 				DEVELOPMENT_TEAM = 67AR6NPQWB;
 				ENABLE_PREVIEWS = YES;
@@ -554,7 +554,7 @@
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -566,7 +566,7 @@
 				CODE_SIGN_ENTITLEMENTS = AiFriendChat/AiFriendChat.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "\"AiFriendChat/Preview Content\"";
 				DEVELOPMENT_TEAM = 67AR6NPQWB;
 				ENABLE_PREVIEWS = YES;
@@ -593,7 +593,7 @@
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -730,7 +730,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AiFriendChat.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AiFriendChat";
 			};
 			name = Debug;
@@ -749,7 +749,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AiFriendChat.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AiFriendChat";
 			};
 			name = Release;
@@ -766,7 +766,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_TARGET_NAME = AiFriendChat;
 			};
 			name = Debug;
@@ -783,7 +783,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_TARGET_NAME = AiFriendChat;
 			};
 			name = Release;

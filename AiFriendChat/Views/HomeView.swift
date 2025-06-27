@@ -6,7 +6,6 @@ import StoreKit
 private enum Field: Hashable {
     case userName, phoneNumber
 }
-
 struct HomeView: View {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.app", category: "HomeView")
     
@@ -59,7 +58,9 @@ struct HomeView: View {
                     
                     // Trial/Subscription Status
                     if !purchaseManager.isSubscribed {
-                        Text("Trial Calls Remaining: \(purchaseManager.getRemainingTrialCalls())")
+                        Text(purchaseManager.isSubscribed ? 
+                             "Call Time: \(purchaseManager.getRemainingTimeDisplay())" : 
+                             "Trial Calls: \(purchaseManager.getRemainingTrialCalls())")
                             .font(.subheadline)
                             .foregroundColor(.white)
                             .padding(.horizontal)
@@ -268,7 +269,7 @@ struct HomeView: View {
         
         Task {
             do {
-                try await viewModel.updateUserName(to: userName)
+                _ = try await viewModel.updateUserName(to: userName)
                 await MainActor.run {
                     UserDefaults.standard.set(userName, forKey: "userName")
                     isUpdatingName = false

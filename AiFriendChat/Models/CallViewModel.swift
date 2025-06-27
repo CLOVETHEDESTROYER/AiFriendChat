@@ -92,7 +92,7 @@ class CallViewModel: ObservableObject {
 
         Task {
             do {
-                let response = try await CallService.shared.makeCall(phoneNumber: phoneNumber, scenario: scenario)
+                _ = try await CallService.shared.makeCall(phoneNumber: phoneNumber, scenario: scenario)
                 
                 await MainActor.run {
                     self.isCallInProgress = false
@@ -151,8 +151,8 @@ class CallViewModel: ObservableObject {
         return purchaseManager.getRemainingTrialCalls()
     }
 
-    private func logCall(phoneNumber: String, scenario: String, status: CallStatus) {
-        let callHistory = CallHistory(phoneNumber: phoneNumber, scenario: scenario, status: status)
+    private func logCall(phoneNumber: String, scenario: String, status: CallStatus, duration: TimeInterval = 0) {
+        let callHistory = CallHistory(phoneNumber: phoneNumber, scenario: scenario, status: status, duration: duration)
         modelContext.insert(callHistory)
         try? modelContext.save()
     }

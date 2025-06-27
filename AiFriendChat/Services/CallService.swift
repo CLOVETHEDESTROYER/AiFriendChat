@@ -72,6 +72,8 @@ class CallService {
     
     // MARK: - Make Immediate Call
     func makeCall(phoneNumber: String, scenario: String) async throws -> String {
+        let startTime = Date()
+        
         // Check if user can make call
         guard try await PurchaseManager.shared.canMakeCall() else {
             throw NSError(domain: "", code: -1,
@@ -95,6 +97,14 @@ class CallService {
               let message = json["message"] as? String else {
             throw NSError(domain: "", code: -1,
                          userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])
+        }
+        
+        let endTime = Date()
+        let duration = endTime.timeIntervalSince(startTime)
+        
+        // Add call time to purchase manager
+        await MainActor.run {
+            PurchaseManager.shared.addCallTime(duration)
         }
         
         // Increment call count only after successful call
@@ -200,6 +210,7 @@ class CallService {
     }
     
     func makeCustomCall(phoneNumber: String, scenarioId: String) async throws -> String {
+        let startTime = Date()
         let purchaseManager = await PurchaseManager.shared
         
         // Check subscription and trial status
@@ -238,8 +249,22 @@ class CallService {
             
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let message = json["message"] as? String else {
+                // If call fails, decrement the count
+                if !(await purchaseManager.isSubscribed) {
+                    await MainActor.run {
+                        purchaseManager.decrementCallCount()
+                    }
+                }
                 throw NSError(domain: "", code: -1,
                              userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])
+            }
+            
+            let endTime = Date()
+            let duration = endTime.timeIntervalSince(startTime)
+            
+            // Add call time to purchase manager
+            await MainActor.run {
+                PurchaseManager.shared.addCallTime(duration)
             }
             
             return message

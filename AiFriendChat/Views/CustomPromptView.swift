@@ -131,72 +131,71 @@ struct CustomPromptView: View {
     }
     
     private var savedPromptsSection: some View {
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Recent Custom Scenarios")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                Spacer()
-                Text("\(savedPrompts.count) total")
-                    .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            .padding(.horizontal)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 15) {
-                    ForEach(Array(savedPrompts.sorted { $0.createdAt > $1.createdAt }.prefix(5))) { prompt in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text(prompt.name)
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Text(prompt.scenarioId != nil ? "✓" : "!")
-                                    .foregroundColor(prompt.scenarioId != nil ? .green : .red)
+        Group {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Recent Custom Scenarios")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    Spacer()
+                    Text("\(savedPrompts.count) total")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(.horizontal)
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 15) {
+                        ForEach(Array(savedPrompts.sorted { $0.createdAt > $1.createdAt }.prefix(5))) { prompt in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(prompt.name)
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                    Spacer()
+                                    Text(prompt.scenarioId != nil ? "✓" : "!")
+                                        .foregroundColor(prompt.scenarioId != nil ? .green : .red)
+                                }
+                                
+                                Text(prompt.persona)
+                                    .font(.subheadline)
+                                    .foregroundColor(.white.opacity(0.8))
+                                    .lineLimit(2)
+                                
+                                Text("Voice: \(prompt.voiceType.displayName)")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.7))
                             }
-                            
-                            Text(prompt.persona)
-                                .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.8))
-                                .lineLimit(2)
-                            
-                            Text("Voice: \(prompt.voiceType.displayName)")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.7))
-                        }
-                        .padding()
-                        .frame(width: 280)
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(10)
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                modelContext.delete(prompt)
-                                try? modelContext.save()
-                            } label: {
-                                Label("Delete", systemImage: "trash")
+                            .padding()
+                            .frame(width: 280)
+                            .background(Color.white.opacity(0.1))
+                            .cornerRadius(10)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    deletePrompt(prompt)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             }
                         }
                     }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
-        }
-        
-        if savedPrompts.count > 5 {
-            Button(action: {
-                showingPromptDetail = true
-            }) {
-                Text("View All Scenarios")
-                    .font(.subheadline)
-                    .foregroundColor(.white)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 16)
-                    .background(Color.white.opacity(0.2))
-                    .cornerRadius(20)
+            if savedPrompts.count > 5 {
+                Button(action: {
+                    showingPromptDetail = true
+                }) {
+                    Text("View All Scenarios")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .background(Color.white.opacity(0.2))
+                        .cornerRadius(20)
+                }
             }
-            .padding(.horizontal)
         }
     }
     
@@ -254,9 +253,9 @@ struct CustomPromptView: View {
     
     private func deletePrompt(_ prompt: SavedPrompt) {
         Task {
+            modelContext.delete(prompt)
             do {
-                modelContext.delete(prompt)
-                try? modelContext.save()
+                try modelContext.save()
             } catch {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
