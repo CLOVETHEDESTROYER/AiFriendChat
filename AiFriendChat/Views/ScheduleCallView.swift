@@ -14,6 +14,7 @@ struct ScheduleCallView: View {
     @StateObject private var viewModel: ScheduleCallViewModel
     @Environment(\.presentationMode) var presentationMode
     @Query private var savedPrompts: [SavedPrompt]
+    @FocusState private var isInputActive: Bool
     
     init(phoneNumber: String, scenario: String) {
         let vm = ScheduleCallViewModel()
@@ -27,7 +28,16 @@ struct ScheduleCallView: View {
             Form {
                 Section(header: Text("Call Details")) {
                     TextField("Phone Number", text: $viewModel.phoneNumber)
+                        .focused($isInputActive)
                         .keyboardType(.phonePad)
+                        .toolbar {
+                            ToolbarItemGroup(placement: .keyboard) {
+                                Spacer()
+                                Button("Done") {
+                                    isInputActive = false
+                                }
+                            }
+                        }
                     
                     DatePicker("Scheduled Time", selection: $viewModel.selectedDate, in: Date()...)
                     
@@ -95,6 +105,13 @@ struct ScheduleCallView: View {
             .fullScreenCover(isPresented: $viewModel.showAuthView) {
                 AuthView()
             }
+            .background(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        isInputActive = false
+                    }
+            )
         }
         .onAppear {
             viewModel.authViewModel = authViewModel
