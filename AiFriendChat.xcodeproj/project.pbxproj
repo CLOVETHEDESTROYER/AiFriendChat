@@ -49,6 +49,9 @@
 		9DFC07D62D5BDCB700E88B1B /* SavedPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DFC07D52D5BDCB700E88B1B /* SavedPrompt.swift */; };
 		C089B0F42E0F32180034854F /* Configuration.storekit in Resources */ = {isa = PBXBuildFile; fileRef = C089B0F32E0F32180034854F /* Configuration.storekit */; };
 		C0CB9E242E2801DB00D74546 /* BackendService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CB9E232E2801DB00D74546 /* BackendService.swift */; };
+		C0CC99D12E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99CF2E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift */; };
+		C0CC99D22E4FD5C5001CED3E /* EnhancedUsageStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99D02E4FD5C5001CED3E /* EnhancedUsageStatsView.swift */; };
+		C0CC99D42E4FDBAE001CED3E /* EnhancedVoiceSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99D32E4FDBAE001CED3E /* EnhancedVoiceSelectionView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -116,6 +119,9 @@
 		9DFC07D52D5BDCB700E88B1B /* SavedPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPrompt.swift; sourceTree = "<group>"; };
 		C089B0F32E0F32180034854F /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
 		C0CB9E232E2801DB00D74546 /* BackendService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendService.swift; sourceTree = "<group>"; };
+		C0CC99CF2E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedScenarioSelectionView.swift; sourceTree = "<group>"; };
+		C0CC99D02E4FD5C5001CED3E /* EnhancedUsageStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedUsageStatsView.swift; sourceTree = "<group>"; };
+		C0CC99D32E4FDBAE001CED3E /* EnhancedVoiceSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedVoiceSelectionView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -219,6 +225,9 @@
 		9D1E6C652D418B80004F7125 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				C0CC99D32E4FDBAE001CED3E /* EnhancedVoiceSelectionView.swift */,
+				C0CC99CF2E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift */,
+				C0CC99D02E4FD5C5001CED3E /* EnhancedUsageStatsView.swift */,
 				9D2B94512D56C84400371F0D /* Components */,
 				9D2571D02D5659AA00FDB900 /* Modifiers */,
 				9D2571CD2D56594D00FDB900 /* AuthPromptView.swift */,
@@ -453,6 +462,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9D2571D12D5659AA00FDB900 /* AuthPromptModifier.swift in Sources */,
+				C0CC99D42E4FDBAE001CED3E /* EnhancedVoiceSelectionView.swift in Sources */,
 				9D6013002D48926F00F566C2 /* CallHistoryView.swift in Sources */,
 				9DFC07D62D5BDCB700E88B1B /* SavedPrompt.swift in Sources */,
 				9D6013012D48926F00F566C2 /* AccountView.swift in Sources */,
@@ -488,6 +498,8 @@
 				9D1E6C832D418B80004F7125 /* Extensions.swift in Sources */,
 				9D2571CA2D55D73000FDB900 /* CustomPromptView.swift in Sources */,
 				9D1E6C842D418B80004F7125 /* HomeViewModel.swift in Sources */,
+				C0CC99D12E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift in Sources */,
+				C0CC99D22E4FD5C5001CED3E /* EnhancedUsageStatsView.swift in Sources */,
 				9D2571CE2D56594D00FDB900 /* AuthPromptView.swift in Sources */,
 				9D1E6C852D418B80004F7125 /* Item.swift in Sources */,
 			);

@@ -17,9 +17,19 @@ class CallViewModel: ObservableObject {
     @Published var upgradeMessage: String?
     @Published var showUpgradePrompt = false
     
-    private let backendService = CallService.shared
+    // NEW: Duration tracking
+    @Published var currentCallDuration: TimeInterval = 0
+    @Published var callDurationLimit: Int = 60 // Default 1 minute
+    @Published var showDurationWarning = false
+    
+    // NEW: Enhanced usage stats
+    @Published var usageStats: UsageStats?
+    
+    // NEW: Use enhanced services
+    private let backendService = BackendService.shared
     private let purchaseManager = PurchaseManager.shared
     private let modelContext: ModelContext
+    private var callTimer: Timer?
     
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -27,6 +37,7 @@ class CallViewModel: ObservableObject {
 
     func initiateCall(phoneNumber: String, scenario: String) {
         clearMessages()
+        resetCallTimer()
 
         guard !phoneNumber.isEmpty else {
             setErrorMessage("Please enter a phone number.")
@@ -36,91 +47,161 @@ class CallViewModel: ObservableObject {
         let formattedPhone = phoneNumber.starts(with: "+") ? phoneNumber : "+1" + phoneNumber.filter { $0.isNumber }
         
         Task {
-            // First check if user can make call
-            let remainingCalls = purchaseManager.getRemainingTrialCalls()
-            
-            if !purchaseManager.isSubscribed && remainingCalls <= 0 {
-                setErrorMessage("You've used all your trial calls. Please subscribe to continue making calls.")
-                return
-            }
-            
-            // Increment call count BEFORE making the call if not subscribed
-            if !purchaseManager.isSubscribed {
-                purchaseManager.incrementCallCount()
-            }
-            
-            if scenario.hasPrefix("custom_") {
-                // Extract the prompt name from the scenario string
-                let promptName = String(scenario.dropFirst("custom_".count))
+            do {
+                // NEW: Use enhanced backend service
+                let response = try await backendService.makeCall(phoneNumber: formattedPhone, scenario: scenario)
                 
-                // Find the saved prompt in SwiftData
-                let descriptor = FetchDescriptor<SavedPrompt>(
-                    predicate: #Predicate<SavedPrompt> { prompt in
-                        prompt.name == promptName
-                    }
-                )
-                
-                guard let savedPrompt = try? modelContext.fetch(descriptor).first,
-                      let scenarioId = savedPrompt.scenarioId else {
-                    setErrorMessage("Custom scenario not found")
-                    return
+                await MainActor.run {
+                    // Set duration limit from backend response
+                    self.callDurationLimit = response.duration_limit
+                    self.startCallTimer()
+                    self.setSuccessMessage("Call initiated successfully! Duration limit: \(response.duration_limit)s")
+                    self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .completed, duration: TimeInterval(response.duration_limit))
+                    
+                    // Update usage stats display
+                    self.updateUsageStatsFromResponse(response.usage_stats)
                 }
                 
-                // Use the makeCustomCall endpoint
-                do {
-                    let message = try await CallService.shared.makeCustomCall(
-                        phoneNumber: formattedPhone,
-                        scenarioId: scenarioId
-                    )
-                    setSuccessMessage(message)
-                    logCall(phoneNumber: phoneNumber, scenario: scenario, status: .completed)
-                } catch {
-                    // If call fails, decrement the count
-                    if !purchaseManager.isSubscribed {
-                        purchaseManager.decrementCallCount()
-                    }
-                    setErrorMessage(error.localizedDescription)
-                    logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
+            } catch BackendError.trialExhausted {
+                await MainActor.run {
+                    self.upgradeMessage = "Your trial calls have been used. Upgrade to continue making calls!"
+                    self.showUpgradePrompt = true
+                    self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
                 }
-            } else {
-                // Handle regular scenarios
-                performCall(phoneNumber: formattedPhone, scenario: scenario)
+            } catch BackendError.paymentRequired(let detail) {
+                await MainActor.run {
+                    self.upgradeMessage = detail.message
+                    self.showUpgradePrompt = true
+                    self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
+                }
+            } catch {
+                await MainActor.run {
+                    self.handleCallError(error)
+                    self.logCall(phoneNumber: phoneNumber, scenario: scenario, status: .failed)
+                }
             }
         }
     }
-
-    private func performCall(phoneNumber: String, scenario: String) {
+    
+    // NEW: Enhanced error handling
+    private func handleCallError(_ error: Error) {
+        print("🔴 Call initiation error: \(error.localizedDescription)")
+        print("🔴 Error type: \(type(of: error))")
+        
+        let errorMessage = error.localizedDescription.lowercased()
+        
+        if errorMessage.contains("trial calls") || errorMessage.contains("subscribe") {
+            self.upgradeMessage = error.localizedDescription
+            self.showUpgradePrompt = true
+        } else if errorMessage.contains("authentication") || errorMessage.contains("unauthorized") {
+            self.setErrorMessage("Your session expired. Please log in again to continue.")
+        } else if errorMessage.contains("server") || errorMessage.contains("500") {
+            self.setErrorMessage("Our servers are busy right now. Please try again in a moment.")
+        } else if errorMessage.contains("network") {
+            self.setErrorMessage("Network connection issue. Check your internet and try again.")
+        } else {
+            self.setErrorMessage("Something went wrong: \(error.localizedDescription)")
+        }
+    }
+    
+    // NEW: Call duration timer
+    private func startCallTimer() {
         isCallInProgress = true
-
-        Task {
-            do {
-                _ = try await CallService.shared.makeCall(phoneNumber: phoneNumber, scenario: scenario)
+        callTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            
+            if self.currentCallDuration >= TimeInterval(self.callDurationLimit) {
+                self.endCall()
+            } else {
+                self.currentCallDuration += 1
                 
-                await MainActor.run {
-                    self.isCallInProgress = false
-                    self.setSuccessMessage("Call initiated successfully!")
-                }
-                
-            } catch {
-                await MainActor.run {
-                    self.isCallInProgress = false
-                    
-                    // Handle specific error messages
-                    let errorMessage = error.localizedDescription
-                    if errorMessage.contains("trial calls") || errorMessage.contains("subscribe") {
-                        self.upgradeMessage = errorMessage
-                        self.showUpgradePrompt = true
-                    } else if errorMessage.contains("authentication") || errorMessage.contains("unauthorized") {
-                        self.setErrorMessage("Your session expired. Please log in again to continue.")
-                    } else if errorMessage.contains("server") || errorMessage.contains("500") {
-                        self.setErrorMessage("Our servers are busy right now. Please try again in a moment.")
-                    } else if errorMessage.contains("network") {
-                        self.setErrorMessage("Network connection issue. Check your internet and try again.")
-                    } else {
-                        self.setErrorMessage("Something went wrong: \(errorMessage)")
-                    }
+                // Show warning when approaching limit (10 seconds before)
+                if self.currentCallDuration >= TimeInterval(self.callDurationLimit - 10) {
+                    self.showDurationWarning = true
                 }
             }
+        }
+    }
+    
+    // NEW: End call functionality
+    func endCall() {
+        callTimer?.invalidate()
+        callTimer = nil
+        isCallInProgress = false
+        
+        let finalDuration = currentCallDuration
+        currentCallDuration = 0
+        showDurationWarning = false
+        
+        setSuccessMessage("Call ended. Duration: \(Int(finalDuration))s")
+    }
+    
+    // NEW: Reset timer
+    private func resetCallTimer() {
+        callTimer?.invalidate()
+        callTimer = nil
+        currentCallDuration = 0
+        showDurationWarning = false
+        isCallInProgress = false
+    }
+    
+    // NEW: Update usage stats from backend response
+    private func updateUsageStatsFromResponse(_ stats: UsageStatsUpdate) {
+        // Create a partial stats update for UI display
+        if let currentStats = usageStats {
+            usageStats = UsageStats(
+                app_type: currentStats.app_type,
+                is_trial_active: currentStats.is_trial_active,
+                trial_calls_remaining: currentStats.trial_calls_remaining,
+                trial_calls_used: currentStats.trial_calls_used,
+                calls_made_today: currentStats.calls_made_today,
+                calls_made_this_week: stats.calls_remaining_this_week ?? currentStats.calls_made_this_week,
+                calls_made_this_month: stats.calls_remaining_this_month ?? currentStats.calls_made_this_month,
+                calls_made_total: currentStats.calls_made_total + 1,
+                is_subscribed: currentStats.is_subscribed,
+                subscription_tier: currentStats.subscription_tier,
+                upgrade_recommended: stats.upgrade_recommended,
+                total_call_duration_this_week: currentStats.total_call_duration_this_week,
+                total_call_duration_this_month: currentStats.total_call_duration_this_month,
+                addon_calls_remaining: stats.addon_calls_remaining,
+                addon_calls_expiry: currentStats.addon_calls_expiry,
+                week_start_date: currentStats.week_start_date,
+                month_start_date: currentStats.month_start_date
+            )
+        }
+    }
+    
+    // NEW: Load usage stats from backend
+    func loadUsageStats() async {
+        do {
+            let stats = try await backendService.getUsageStats()
+            await MainActor.run {
+                self.usageStats = stats
+            }
+        } catch {
+            print("Failed to load usage stats: \(error)")
+        }
+    }
+    
+    // NEW: Get remaining calls from backend
+    func getRemainingCalls() async -> Int {
+        do {
+            let stats = try await backendService.getUsageStats()
+            return stats.trial_calls_remaining
+        } catch {
+            print("Failed to get remaining calls: \(error)")
+            return 0
+        }
+    }
+    
+    // NEW: Check if user can make calls
+    func canMakeCall() async -> Bool {
+        do {
+            let permission = try await backendService.checkCallPermission()
+            return permission.can_make_call
+        } catch {
+            print("Failed to check call permission: \(error)")
+            return false
         }
     }
 
@@ -142,15 +223,9 @@ class CallViewModel: ObservableObject {
         DispatchQueue.main.async {
             self.errorMessage = nil
             self.successMessage = nil
+            self.upgradeMessage = nil
+            self.showUpgradePrompt = false
         }
-    }
-
-    private func canMakeCall() async -> Bool {
-        return purchaseManager.getRemainingTrialCalls() > 0 || purchaseManager.isSubscribed
-    }
-
-    private func getRemainingTrialCalls() -> Int {
-        return purchaseManager.getRemainingTrialCalls()
     }
 
     private func logCall(phoneNumber: String, scenario: String, status: CallStatus, duration: TimeInterval = 0) {

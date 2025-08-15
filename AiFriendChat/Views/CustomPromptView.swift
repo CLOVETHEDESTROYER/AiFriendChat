@@ -12,7 +12,7 @@ struct CustomPromptView: View {
     @State private var name = ""
     @State private var prompt = ""
     @State private var persona = ""
-    @State private var selectedVoice: VoiceType = .professionalNeutral
+    @State private var selectedVoice: VoiceType = .alloy
     @State private var temperature: Double = 0.7
     
     @State private var isLoading = false
@@ -22,6 +22,7 @@ struct CustomPromptView: View {
     @State private var alertMessage = ""
     @State private var showingPromptDetail = false
     @State private var selectedPrompt: SavedPrompt?
+    @State private var showingAdvancedVoiceSelection = false
     
     private let callService = CallService.shared
     
@@ -71,6 +72,9 @@ struct CustomPromptView: View {
         }
         .sheet(isPresented: $showingPromptDetail) {
             AllPromptsView(savedPrompts: savedPrompts, modelContext: modelContext)
+        }
+        .sheet(isPresented: $showingAdvancedVoiceSelection) {
+            EnhancedVoiceSelectionView(selectedVoice: $selectedVoice)
         }
     }
     
@@ -124,13 +128,35 @@ struct CustomPromptView: View {
             .background(Color.white.opacity(0.1))
             .cornerRadius(8)
             
-            Picker("Voice", selection: $selectedVoice) {
-                ForEach(VoiceType.allCases, id: \.self) { voice in
-                    Text(voice.displayName)
-                        .tag(voice)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Voice Selection")
+                        .foregroundColor(.white)
+                        .font(.headline)
+                    
+                    Spacer()
+                    
+                    Button("Advanced") {
+                        showingAdvancedVoiceSelection = true
+                    }
+                    .font(.caption)
+                    .foregroundColor(.blue)
                 }
+                
+                Picker("Voice", selection: $selectedVoice) {
+                    ForEach(VoiceType.allCases, id: \.self) { voice in
+                        Text(voice.displayName)
+                            .tag(voice)
+                    }
+                }
+                .pickerStyle(MenuPickerStyle())
+                
+                // Voice Description
+                Text(selectedVoice.description)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.8))
+                    .padding(.top, 4)
             }
-            .pickerStyle(MenuPickerStyle())
             
             VStack(alignment: .leading) {
                 Text("Temperature: \(temperature, specifier: "%.1f")")
@@ -267,7 +293,7 @@ struct CustomPromptView: View {
                     name = ""
                     prompt = ""
                     persona = ""
-                    selectedVoice = .professionalNeutral
+                    selectedVoice = .echo
                     temperature = 0.7
                     isLoading = false
                     

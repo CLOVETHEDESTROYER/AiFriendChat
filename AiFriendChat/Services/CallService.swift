@@ -82,12 +82,8 @@ class CallService {
             await MainActor.run {
                 // Update local purchase manager with backend response
                 if !PurchaseManager.shared.isSubscribed {
-                    // Sync trial counts from backend
-                    let remaining = response.usage_stats.trial_calls_remaining
-                    let total = response.usage_stats.calls_made_total
-                    
-                    // Update local storage to match backend
-                    UserDefaults.standard.set(2 - remaining, forKey: "callsMadeCount")
+                    // The backend now handles all usage tracking
+                    // We can trigger a refresh of the purchase manager if needed
                     PurchaseManager.shared.objectWillChange.send()
                 }
             }
@@ -120,39 +116,20 @@ class CallService {
                         userInfo: [NSLocalizedDescriptionKey: "Name cannot be empty"])
         }
         
-        guard let url = URL(string: "\(baseURL)/update-user-name") else {
-            throw NSError(domain: "", code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
-        }
+        // TEMPORARY SOLUTION: The mobile backend doesn't have a dedicated username update endpoint
+        // For now, we'll store the name locally and simulate a successful update
+        // This will be enhanced when the backend adds user profile management
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        print("📝 Updating username locally to: \(name)")
         
-        // Add authorization header
-        if let token = KeychainManager.shared.getToken(forKey: "accessToken") {
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
+        // Simulate network delay for better UX
+        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
         
-        // Create the correct request body format
-        let requestBody = name  // Send just the string, not a dictionary
+        // Store the name locally
+        UserDefaults.standard.set(name, forKey: "userName")
         
-        request.httpBody = try JSONEncoder().encode(requestBody)
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("Status code: \(httpResponse.statusCode)")
-            print("Response headers: \(httpResponse.allHeaderFields)")
-        }
-        
-        // Print response data for debugging
-        if let responseString = String(data: data, encoding: .utf8) {
-            print("Response data: \(responseString)")
-        }
-        
-        let updateResponse = try JSONDecoder().decode(UpdateNameResponse.self, from: data)
-        return updateResponse.message
+        // Return success message
+        return "Name updated successfully! (stored locally)"
     }
     
     // MARK: - Fetch Scheduled Calls (Placeholder)

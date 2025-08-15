@@ -16,15 +16,39 @@ struct RegisterView: View {
     @State private var password = ""
     
     var body: some View {
-        VStack {
+        VStack(spacing: 20) {
             TextField("Email", text: $email)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
                 .autocapitalization(.none)
+                .disableAutocorrection(true)
+                .keyboardType(.emailAddress)
+                .padding()
+                .background(Color(.systemBackground))
+                .foregroundColor(Color(.label))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(.systemGray4), lineWidth: 1)
+                )
+            
             SecureField("Password", text: $password)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .disableAutocorrection(true)
+                .padding()
+                .background(Color(.systemBackground))
+                .foregroundColor(Color(.label))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(.systemGray4), lineWidth: 1)
+                )
+            
             Button("Register") {
                 authViewModel.register(email: email, password: password)
             }
+            .foregroundColor(.white)
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(Color.blue)
+            .cornerRadius(12)
         }
         .padding()
     }

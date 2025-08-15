@@ -6,6 +6,7 @@ import StoreKit
 private enum Field: Hashable {
     case userName, phoneNumber
 }
+
 struct HomeView: View {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.app", category: "HomeView")
     
@@ -33,6 +34,12 @@ struct HomeView: View {
     @State private var showAuthPrompt = false
     @State private var showAuthView = false
     
+    // NEW: Enhanced features
+    @State private var showEnhancedScenarioSelection = false
+    @State private var showUsageStats = false
+    @State private var usageStats: UsageStats?
+    @State private var isLoadingStats = true
+    
     @FocusState private var activeField: Field?
     
     init(modelContext: ModelContext) {
@@ -51,6 +58,7 @@ struct HomeView: View {
                 )
                 .edgesIgnoringSafeArea(.all)
                 
+                ScrollView {
                 VStack(spacing: 20) {
                     // Header
                     Text("Welcome to AI Friend Chat")
@@ -58,12 +66,25 @@ struct HomeView: View {
                         .foregroundColor(.white)
                         .padding()
                     
-                    // Trial/Subscription Status
-                    let statusText = self.statusText
-                    Text(statusText)
-                        .font(.subheadline)
+                        // Enhanced Usage Stats Card
+                        if let stats = usageStats {
+                            EnhancedStatusCard(stats: stats)
+                                .padding(.horizontal, 20)
+                        } else if isLoadingStats {
+                            ProgressView("Loading usage stats...")
                         .foregroundColor(.white)
-                        .padding(.horizontal)
+                                .padding()
+                        }
+                        
+                        // Call Duration Display (if call in progress)
+                        if callViewModel.isCallInProgress {
+                            CallDurationCard(
+                                currentDuration: callViewModel.currentCallDuration,
+                                durationLimit: callViewModel.callDurationLimit,
+                                showWarning: callViewModel.showDurationWarning
+                            )
+                            .padding(.horizontal, 20)
+                        }
                     
                     // User Name Input
                     TextField("Enter your name", text: $userName)
@@ -73,14 +94,20 @@ struct HomeView: View {
                         .padding(.horizontal, 20)
                         .focused($activeField, equals: .userName)
                         .autocapitalization(.words)
+                            .disableAutocorrection(true)
                     
                     // Update Name Button
                     Button(action: {
                         updateUserName()
                     }) {
                         HStack {
+                                if isUpdatingName {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else {
                             Image(systemName: "person.fill.checkmark")
-                            Text("Update Name")
+                                }
+                                Text(isUpdatingName ? "Updating..." : "Update Name")
                         }
                         .font(.headline)
                         .foregroundColor(.white)
@@ -90,6 +117,7 @@ struct HomeView: View {
                         .cornerRadius(10)
                     }
                     .padding(.horizontal, 20)
+                        .disabled(isUpdatingName)
                     
                     // Phone Number Input
                     TextField("Enter phone number", text: $phoneNumber)
@@ -99,27 +127,40 @@ struct HomeView: View {
                         .padding(.horizontal, 20)
                         .keyboardType(.phonePad)
                         .focused($activeField, equals: .phoneNumber)
-                    
-                    // Scenario Picker Section
-                    VStack(spacing: 10) {
-                        Text("Select a Scenario")
+                            .disableAutocorrection(true)
+                        
+                        // Enhanced Scenario Selection Button
+                        Button(action: {
+                            showEnhancedScenarioSelection = true
+                        }) {
+                            HStack {
+                                Image(systemName: "list.bullet.circle")
+                                Text("Select Scenario")
+                                Spacer()
+                                Text(getScenarioDisplayName(selectedScenario))
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.white.opacity(0.3))
+                                    .cornerRadius(8)
+                                Image(systemName: "chevron.right")
+                            }
                             .font(.headline)
                             .foregroundColor(.white)
-                            .padding(.bottom, 10)
-                        
-                        let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
-                        
-                        LazyVGrid(columns: columns, spacing: 15) {
-                            ForEach(scenarios, id: \.self) { scenario in
-                                scenarioButton(for: scenario)
-                            }
+                            .padding()
+                            .background(Color(.sRGB, white: 1, opacity: 0.2))
+                            .cornerRadius(10)
                         }
                         .padding(.horizontal, 20)
+                        
+                        // Action Buttons
+                        enhancedActionButtons
+                        
+                        Spacer(minLength: 50)
                     }
-                    
-                    actionButtons
-                    
-                    Spacer()
+                }
+                .refreshable {
+                    await loadUsageStats()
                 }
             }
             .navigationTitle("AI Friend Chat")
@@ -129,6 +170,10 @@ struct HomeView: View {
                         .foregroundColor(.white)
                 },
                 trailing: HStack {
+                    Button(action: { showUsageStats = true }) {
+                        Image(systemName: "chart.bar.fill")
+                            .foregroundColor(.white)
+                    }
                     Button(action: { showSettingsSheet = true }) {
                         Image(systemName: "gearshape")
                             .foregroundColor(.white)
@@ -154,32 +199,152 @@ struct HomeView: View {
             .sheet(isPresented: $showAuthPrompt) {
                 AuthPromptView(showAuthView: $showAuthView)
             }
+            .sheet(isPresented: $showEnhancedScenarioSelection) {
+                NavigationView {
+                    EnhancedScenarioSelectionView(selectedScenario: $selectedScenario)
+                        .navigationTitle("Select Scenario")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button("Done") {
+                                    showEnhancedScenarioSelection = false
+                                }
+                            }
+                        }
+                }
+                .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showUsageStats) {
+                NavigationView {
+                    if let stats = usageStats {
+                        EnhancedUsageStatsView(stats: stats)
+                            .navigationTitle("Usage Statistics")
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .navigationBarTrailing) {
+                                    Button("Done") {
+                                        showUsageStats = false
+                                    }
+                                }
+                            }
+                    } else {
+                        ProgressView("Loading statistics...")
+                    }
+                }
+            }
             .alert(alertTitle, isPresented: $showAlert) {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(alertMessage)
             }
-            .alert("Upgrade to Premium", isPresented: $showSubscriptionPrompt) {
-                if let product = purchaseManager.products.first {
-                    Button("Subscribe (\(product.displayPrice))", role: .none) {
-                        Task {
-                            try? await purchaseManager.purchase()
-                        }
-                    }
-                    Button("Cancel", role: .cancel) {}
+            .alert("Upgrade Required", isPresented: $callViewModel.showUpgradePrompt) {
+                Button("View Plans", role: .none) {
+                    showUsageStats = true
                 }
+                Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Get unlimited calls and scheduling features!")
+                Text(callViewModel.upgradeMessage ?? "Upgrade to continue making calls!")
             }
             .onAppear {
                 loadUserData()
+                Task {
+                    await loadUsageStats()
+                }
+            }
+            .onChange(of: callViewModel.errorMessage) { _, newValue in
+                if let error = newValue {
+                    alertTitle = "Call Error"
+                    alertMessage = error
+                    showAlert = true
+                }
+            }
+            .onChange(of: callViewModel.successMessage) { _, newValue in
+                if let success = newValue {
+                    alertTitle = "Success"
+                    alertMessage = success
+                    showAlert = true
+                }
             }
         }
     }
     
+    // MARK: - Enhanced Components
+    
+    private var enhancedActionButtons: some View {
+        VStack(spacing: 15) {
+            Button(action: {
+                makeImmediateCall()
+            }) {
+                HStack {
+                    if callViewModel.isCallInProgress {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .tint(.white)
+                    } else {
+                        Image(systemName: "phone.fill")
+                    }
+                    Text(callViewModel.isCallInProgress ? "Call in Progress..." : "Make Call Now")
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(callViewModel.isCallInProgress ? Color.orange : Color("highlight"))
+                .cornerRadius(10)
+            }
+            .padding(.horizontal, 20)
+            .disabled(callViewModel.isCallInProgress)
+            
+            // End Call Button (when call is in progress)
+            if callViewModel.isCallInProgress {
+                Button(action: {
+                    callViewModel.endCall()
+                }) {
+                    HStack {
+                        Image(systemName: "phone.down.fill")
+                        Text("End Call")
+                    }
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.red)
+                    .cornerRadius(10)
+                }
+                .padding(.horizontal, 20)
+            }
+            
+            Button(action: {
+                showCallHistory = true
+            }) {
+                HStack {
+                    Image(systemName: "clock.arrow.circlepath")
+                    Text("Call History")
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color(.sRGB, white: 1, opacity: 0.2))
+                .cornerRadius(10)
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
     // MARK: - Helper Methods
+    
     private func loadUserData() {
         userName = UserDefaults.standard.string(forKey: "userName") ?? ""
+    }
+    
+    private func loadUsageStats() async {
+        isLoadingStats = true
+        await callViewModel.loadUsageStats()
+        await MainActor.run {
+            self.usageStats = callViewModel.usageStats
+            self.isLoadingStats = false
+        }
     }
     
     private func updateUserName() {
@@ -230,112 +395,126 @@ struct HomeView: View {
         callViewModel.initiateCall(phoneNumber: phoneNumber, scenario: selectedScenario)
     }
     
-    private func hideKeyboard() {
-        activeField = nil
-    }
-    
-    private func handleCallViewModelError() {
-        if let error = callViewModel.errorMessage {
-            alertTitle = "Call Error"
-            alertMessage = error
-            showAlert = true
-        }
-    }
-    
-    private func handleCallViewModelSuccess() {
-        if let success = callViewModel.successMessage {
-            alertTitle = "Success"
-            alertMessage = success
-            showAlert = true
-        }
-    }
-    
-    // MARK: - Refactored Subviews
-    private func scenarioButton(for scenario: String) -> some View {
-        Button(action: {
-            selectedScenario = scenario
-        }) {
-            VStack {
-                Image(systemName: "hexagon.fill")
-                    .resizable()
-                    .frame(width: 30, height: 30)
-                    .foregroundColor(selectedScenario == scenario ? .white : .white)
-                    .scaleEffect(selectedScenario == scenario ? 1.2 : 1.0)
-                    .animation(.spring(), value: selectedScenario)
-                Text(scenario.replacingOccurrences(of: "_", with: " ").capitalized)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(selectedScenario == scenario ? .white : .white)
-                    .multilineTextAlignment(.center)
-            }
-            .padding()
-            .frame(width: 100, height: 100)
-            .background(selectedScenario == scenario ? Color("highlight") : Color(.sRGB, white: 1, opacity: 0.2))
-            .cornerRadius(15)
-            .shadow(color: .gray.opacity(0.5), radius: 5, x: 0, y: 2)
-        }
-    }
-
-    private var actionButtons: some View {
-        VStack(spacing: 15) {
-            Button(action: {
-                makeImmediateCall()
-            }) {
-                HStack {
-                    Image(systemName: "phone.fill")
-                    Text("Make Call Now")
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color("highlight"))
-                .cornerRadius(10)
-            }
-            .padding(.horizontal, 20)
-            .disabled(callViewModel.isCallInProgress)
-            
-            Button(action: {
-                showCallHistory = true
-            }) {
-                HStack {
-                    Image(systemName: "clock.arrow.circlepath")
-                    Text("Call History")
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color(.sRGB, white: 1, opacity: 0.2))
-                .cornerRadius(10)
-            }
-            .padding(.horizontal, 20)
-        }
-    }
-    
-    private var statusText: String {
-        if purchaseManager.isSubscribed {
-            return "Call Time: \(purchaseManager.getRemainingTimeDisplay())"
-        } else {
-            return "Trial Calls: \(purchaseManager.getRemainingTrialCalls())"
-        }
+    private func getScenarioDisplayName(_ scenario: String) -> String {
+        return scenario.replacingOccurrences(of: "_", with: " ").capitalized
     }
 }
 
-// MARK: - Supporting Types
-let scenarios = [
-    "default",
-    "sister_emergency", 
-    "mother_emergency",
-    "yacht_party",
-    "instigator",
-    "gameshow_host"
-]
+// MARK: - Enhanced Status Card
+
+struct EnhancedStatusCard: View {
+    let stats: UsageStats
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("Status")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
+                    Text(statusText)
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+                Spacer()
+                VStack(alignment: .trailing) {
+                    Text("Calls")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.8))
+                    Text(callsText)
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+            }
+            
+            if stats.upgrade_recommended {
+                HStack {
+                    Text("💡 Ready to upgrade for more calls?")
+                        .font(.caption)
+                        .foregroundColor(.yellow)
+                    Spacer()
+                }
+            }
+        }
+        .padding()
+        .background(Color(.sRGB, white: 1, opacity: 0.2))
+        .cornerRadius(12)
+    }
+    
+    private var statusText: String {
+        if stats.is_subscribed {
+            switch stats.subscription_tier {
+            case "mobile_basic":
+                return "Basic Plan"
+            case "mobile_premium":
+                return "Premium Plan"
+            default:
+                return "Subscribed"
+            }
+        } else if stats.is_trial_active {
+            return "Trial Active"
+        } else {
+            return "Trial Ended"
+        }
+    }
+    
+    private var callsText: String {
+        if stats.is_subscribed {
+            if stats.subscription_tier == "mobile_basic" {
+                return "\(max(0, 5 - stats.calls_made_this_week))/5"
+            } else if stats.subscription_tier == "mobile_premium" {
+                return "\(max(0, 30 - stats.calls_made_this_month))/30"
+            }
+        }
+        return "\(stats.trial_calls_remaining) left"
+    }
+}
+
+// MARK: - Call Duration Card
+
+struct CallDurationCard: View {
+    let currentDuration: TimeInterval
+    let durationLimit: Int
+    let showWarning: Bool
+    
+    var body: some View {
+        VStack(spacing: 8) {
+                HStack {
+                Text("⏱️ Call Duration")
+                .font(.headline)
+                .foregroundColor(.white)
+                Spacer()
+                Text("\(formatDuration(Int(currentDuration))) / \(formatDuration(durationLimit))")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(showWarning ? .red : .white)
+            }
+            
+            ProgressView(value: currentDuration, total: Double(durationLimit))
+                .progressViewStyle(LinearProgressViewStyle(tint: showWarning ? .red : .green))
+            
+            if showWarning {
+                Text("⚠️ Call will end soon!")
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .fontWeight(.bold)
+            }
+        }
+        .padding()
+        .background(Color(.sRGB, white: 1, opacity: 0.2))
+        .cornerRadius(12)
+    }
+    
+    private func formatDuration(_ seconds: Int) -> String {
+        let minutes = seconds / 60
+        let remainingSeconds = seconds % 60
+        return String(format: "%d:%02d", minutes, remainingSeconds)
+    }
+}
 
 #Preview {
     HomeView(modelContext: try! ModelContainer(for: CallHistory.self).mainContext)
         .environmentObject(AuthViewModel())
 }
-
-
-
-

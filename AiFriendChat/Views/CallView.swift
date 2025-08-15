@@ -27,17 +27,51 @@ struct CallView: View {
         case userName, phoneNumber
     }
     
+    // Enhanced scenario collection with all available premade scenarios
+    var allPremadeScenarios: [String] {
+        return [
+            // Entertainment
+            "default", "celebrity", "comedian", "storyteller", "yacht_party", "instigator",
+            // Professional
+            "sales_pitch", "customer_service", "real_estate",
+            // Emergency
+            "sister_emergency", "mother_emergency",
+            // Romantic
+            "caring_partner", "surprise_date_planner", "long_distance_love",
+            // Family & Friends
+            "supportive_bestie", "encouraging_parent", "caring_sibling",
+            // Motivational
+            "therapist", "motivational_coach", "wellness_checkin",
+            // Celebration
+            "celebration_caller", "birthday_wishes", "gratitude_caller"
+        ]
+    }
+    
     var scenarios: [String] {
-        var defaultScenarios = ["default", "sister_emergency", "mother_emergency", "yacht_party", "instigator", "gameshow_host"]
+        var allScenarios = allPremadeScenarios
         
         if purchaseManager.isSubscribed {
             if let data = UserDefaults.standard.data(forKey: "savedCustomPrompts"),
                let customPrompts = try? JSONDecoder().decode([SavedPrompt].self, from: data) {
-                defaultScenarios.append(contentsOf: customPrompts.map { "custom_\($0.name)" })
+                allScenarios.append(contentsOf: customPrompts.map { "custom_\($0.name)" })
             }
         }
         
-        return defaultScenarios
+        return allScenarios
+    }
+    
+    // Organize scenarios into pages for swiping (6 per page)
+    var scenarioPages: [[String]] {
+        let itemsPerPage = 6
+        var pages: [[String]] = []
+        let allScenarios = scenarios
+        
+        for i in stride(from: 0, to: allScenarios.count, by: itemsPerPage) {
+            let endIndex = min(i + itemsPerPage, allScenarios.count)
+            pages.append(Array(allScenarios[i..<endIndex]))
+        }
+        
+        return pages
     }
     
     init(modelContext: ModelContext) {
@@ -139,41 +173,63 @@ struct CallView: View {
                         }
                         .padding(.horizontal)
                         
-                        // Scenario Selection
+                        // Enhanced Swipeable Scenario Selection
                         VStack(alignment: .leading, spacing: 15) {
-                            Text("Select Scenario")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .padding(.horizontal)
-                            
-                            LazyVGrid(columns: [
-                                GridItem(.flexible()),
-                                GridItem(.flexible()),
-                                GridItem(.flexible())
-                            ], spacing: 15) {
-                                ForEach(scenarios, id: \.self) { scenario in
-                                    Button(action: { selectedScenario = scenario }) {
-                                        VStack {
-                                            Image(systemName: scenario.hasPrefix("custom_") ? "text.bubble.fill" : "hexagon.fill")
-                                                .resizable()
-                                                .frame(width: 24, height: 24)
-                                                .foregroundColor(selectedScenario == scenario ? .white : .black)
-                                            
-                                            Text(displayName(for: scenario))
-                                                .font(.system(size: 12, weight: .medium))
-                                                .foregroundColor(selectedScenario == scenario ? .white : .black)
-                                                .multilineTextAlignment(.center)
-                                                .lineLimit(2)
-                                        }
-                                        .frame(height: 80)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 8)
-                                        .background(selectedScenario == scenario ? Color("highlight") : Color.white.opacity(0.9))
-                                        .cornerRadius(10)
-                                    }
-                                }
+                            HStack {
+                                Text("Select Scenario")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                
+                                Spacer()
+                                
+                                Text("Swipe for more →")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.7))
                             }
                             .padding(.horizontal)
+                            
+                            TabView {
+                                ForEach(Array(scenarioPages.enumerated()), id: \.offset) { pageIndex, pageScenarios in
+                                    LazyVGrid(columns: [
+                                        GridItem(.flexible()),
+                                        GridItem(.flexible()),
+                                        GridItem(.flexible())
+                                    ], spacing: 15) {
+                                        ForEach(pageScenarios, id: \.self) { scenario in
+                                            Button(action: { selectedScenario = scenario }) {
+                                                VStack(spacing: 8) {
+                                                    // Scenario Icon
+                                                    Image(systemName: getScenarioIcon(for: scenario))
+                                                        .resizable()
+                                                        .frame(width: 24, height: 24)
+                                                        .foregroundColor(selectedScenario == scenario ? .white : .black)
+                                                    
+                                                    Text(displayName(for: scenario))
+                                                        .font(.system(size: 11, weight: .medium))
+                                                        .foregroundColor(selectedScenario == scenario ? .white : .black)
+                                                        .multilineTextAlignment(.center)
+                                                        .lineLimit(2)
+                                                }
+                                                .frame(height: 75)
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 6)
+                                                .background(selectedScenario == scenario ? Color("highlight") : Color.white.opacity(0.9))
+                                                .cornerRadius(10)
+                                            }
+                                        }
+                                        
+                                        // Fill empty spots in the grid if needed
+                                        ForEach(pageScenarios.count..<6, id: \.self) { _ in
+                                            Color.clear
+                                                .frame(height: 75)
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                    .tag(pageIndex)
+                                }
+                            }
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+                            .frame(height: 180)
                         }
                         
                         // Call Button
@@ -312,7 +368,75 @@ struct CallView: View {
         if scenario.hasPrefix("custom_") {
             return "Custom: " + scenario.replacingOccurrences(of: "custom_", with: "")
         }
-        return scenario.replacingOccurrences(of: "_", with: " ").capitalized
+        
+        // Enhanced display names for better UX
+        switch scenario {
+        case "default": return "Friendly Chat"
+        case "celebrity": return "Celebrity Talk"
+        case "comedian": return "Comedy Call"
+        case "storyteller": return "Story Time"
+        case "yacht_party": return "Party Host"
+        case "instigator": return "Drama Starter"
+        case "sales_pitch": return "Sales Call"
+        case "customer_service": return "Support"
+        case "real_estate": return "Real Estate"
+        case "sister_emergency": return "Sister Help"
+        case "mother_emergency": return "Mom Help"
+        case "caring_partner": return "Partner"
+        case "surprise_date_planner": return "Date Planner"
+        case "long_distance_love": return "Long Distance"
+        case "supportive_bestie": return "Best Friend"
+        case "encouraging_parent": return "Parent"
+        case "caring_sibling": return "Sibling"
+        case "therapist": return "Life Coach"
+        case "motivational_coach": return "Motivator"
+        case "wellness_checkin": return "Wellness"
+        case "celebration_caller": return "Celebration"
+        case "birthday_wishes": return "Birthday"
+        case "gratitude_caller": return "Gratitude"
+        default:
+            return scenario.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+    
+    private func getScenarioIcon(for scenario: String) -> String {
+        if scenario.hasPrefix("custom_") {
+            return "text.bubble.fill"
+        }
+        
+        // Category-based icons for better visual organization
+        switch scenario {
+        // Entertainment
+        case "default": return "message.circle.fill"
+        case "celebrity": return "star.circle.fill"
+        case "comedian": return "theatermasks.fill"
+        case "storyteller": return "book.circle.fill"
+        case "yacht_party": return "sailboat.fill"
+        case "instigator": return "exclamationmark.triangle.fill"
+        
+        // Professional
+        case "sales_pitch": return "briefcase.fill"
+        case "customer_service": return "headphones.circle.fill"
+        case "real_estate": return "house.circle.fill"
+        
+        // Emergency
+        case "sister_emergency", "mother_emergency": return "cross.circle.fill"
+        
+        // Romantic
+        case "caring_partner", "surprise_date_planner", "long_distance_love": return "heart.circle.fill"
+        
+        // Family & Friends
+        case "supportive_bestie", "encouraging_parent", "caring_sibling": return "person.2.circle.fill"
+        
+        // Motivational
+        case "therapist", "motivational_coach", "wellness_checkin": return "brain.head.profile"
+        
+        // Celebration
+        case "celebration_caller", "birthday_wishes", "gratitude_caller": return "party.popper.fill"
+        
+        default:
+            return "hexagon.fill"
+        }
     }
 }
 
@@ -340,3 +464,4 @@ struct ShakeEffect: GeometryEffect {
         return ProjectionTransform(CGAffineTransform(translationX: translation, y: 0))
     }
 }
+

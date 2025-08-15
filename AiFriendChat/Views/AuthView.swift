@@ -56,26 +56,32 @@ struct AuthView: View {
                 
                 // Email Text Field
                 TextField("Email", text: $email)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
                     .keyboardType(.emailAddress)
-                    .frame(maxWidth: .infinity, minHeight: 44) // Prevent constraint issues
+                    .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.white.opacity(0.4)) // Background for better contrast
-                    .cornerRadius(15) // Rounded edges
-                    .foregroundColor(.black) // Black text inside the text field
+                    .background(Color(.systemBackground).opacity(0.9))
+                    .foregroundColor(Color(.label))
+                    .cornerRadius(15)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 15)
+                            .stroke(Color(.systemGray4), lineWidth: 0.5)
+                    )
                     .padding(.horizontal, 30)
                 
                 // Password Text Field
                 SecureField("Password", text: $password)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
                     .disableAutocorrection(true)
-                    .frame(maxWidth: .infinity, minHeight: 44) // Prevent constraint issues
+                    .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.white.opacity(0.4)) // Background for better contrast
-                    .cornerRadius(15) // Rounded edges
-                    .foregroundColor(.black) // Black text inside the secure field
+                    .background(Color(.systemBackground).opacity(0.9))
+                    .foregroundColor(Color(.label))
+                    .cornerRadius(15)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 15)
+                            .stroke(Color(.systemGray4), lineWidth: 0.5)
+                    )
                     .padding(.horizontal, 30)
                 
                 // Login/Register Button
