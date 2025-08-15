@@ -48,6 +48,7 @@
 		9DDE9E252D586585009FBE55 /* CallHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DDE9E242D586585009FBE55 /* CallHistory.swift */; };
 		9DFC07D62D5BDCB700E88B1B /* SavedPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DFC07D52D5BDCB700E88B1B /* SavedPrompt.swift */; };
 		C089B0F42E0F32180034854F /* Configuration.storekit in Resources */ = {isa = PBXBuildFile; fileRef = C089B0F32E0F32180034854F /* Configuration.storekit */; };
+		C0CB9E242E2801DB00D74546 /* BackendService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CB9E232E2801DB00D74546 /* BackendService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -114,6 +115,7 @@
 		9DDE9E242D586585009FBE55 /* CallHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallHistory.swift; sourceTree = "<group>"; };
 		9DFC07D52D5BDCB700E88B1B /* SavedPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPrompt.swift; sourceTree = "<group>"; };
 		C089B0F32E0F32180034854F /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
+		C0CB9E232E2801DB00D74546 /* BackendService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -186,6 +188,7 @@
 		9D1E6C572D418B80004F7125 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				C0CB9E232E2801DB00D74546 /* BackendService.swift */,
 				9D1E6C552D418B80004F7125 /* AuthService.swift */,
 				9D1E6C562D418B80004F7125 /* CallService.swift */,
 			);
@@ -465,6 +468,7 @@
 				9D1E6C772D418B80004F7125 /* ScenarioSelectionView.swift in Sources */,
 				9D1E6C782D418B80004F7125 /* User.swift in Sources */,
 				9D1E6C792D418B80004F7125 /* CallViewModel.swift in Sources */,
+				C0CB9E242E2801DB00D74546 /* BackendService.swift in Sources */,
 				9D1E6C7A2D418B80004F7125 /* NetworkManager.swift in Sources */,
 				9D1E6C7B2D418B80004F7125 /* CallService.swift in Sources */,
 				9D1E6C7C2D418B80004F7125 /* RegisterView.swift in Sources */,
@@ -527,7 +531,7 @@
 				CODE_SIGN_ENTITLEMENTS = AiFriendChat/AiFriendChat.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_ASSET_PATHS = "\"AiFriendChat/Preview Content\"";
 				DEVELOPMENT_TEAM = 67AR6NPQWB;
 				ENABLE_PREVIEWS = YES;
@@ -566,7 +570,7 @@
 				CODE_SIGN_ENTITLEMENTS = AiFriendChat/AiFriendChat.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_ASSET_PATHS = "\"AiFriendChat/Preview Content\"";
 				DEVELOPMENT_TEAM = 67AR6NPQWB;
 				ENABLE_PREVIEWS = YES;

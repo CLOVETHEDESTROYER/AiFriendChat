@@ -7,16 +7,18 @@
 
 import StoreKit
 import OSLog
+import Foundation
+
 
 @MainActor
 class PurchaseManager: ObservableObject {
     static let shared = PurchaseManager()
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.app", category: "PurchaseManager")
     
-    private let productId = "com.aifriendchat.monthly_subscription"
-    private let trialCallsLimit = 1
-    private let monthlyCallTimeLimit: TimeInterval = 20 * 60 // 20 minutes in seconds
-    private let weeklyCallTimeLimit: TimeInterval = 20 * 60 // 20 minutes in seconds
+    private let productId = "com.aifriendchat.premium.weekly.v2"
+    private let trialCallsLimit = 2
+    private let monthlyCallTimeLimit: TimeInterval = 40 * 60 // 40 minutes in seconds
+    private let weeklyCallTimeLimit: TimeInterval = 10 * 60 // 10 minutes per week
     
     @Published private(set) var products: [Product] = []
     @Published private(set) var purchasedProducts: Set<String> = []
@@ -128,6 +130,10 @@ class PurchaseManager: ObservableObject {
     
     // MARK: - Call Permission Checks
     func canMakeCall() async throws -> Bool {
+        // First sync with backend
+        await syncWithBackend()
+        
+        // Then check local status
         try await updateSubscriptionStatus()
         
         if isSubscribed {
@@ -270,6 +276,28 @@ class PurchaseManager: ObservableObject {
         addCallTime(minutes * 60)
     }
     #endif
+    
+    func syncWithBackend() async {
+        do {
+            let usageStats = try await BackendService.shared.getUsageStats()
+            
+            await MainActor.run {
+                // Update local trial count to match backend
+                let usedCalls = usageStats.trial_calls_used
+                UserDefaults.standard.set(usedCalls, forKey: "callsMadeCount")
+                
+                // Update subscription status
+                if usageStats.is_subscribed {
+                    self.isSubscribed = true
+                    self.subscriptionType = .weekly // Assuming weekly subscription
+                }
+                
+                self.objectWillChange.send()
+            }
+        } catch {
+            logger.error("Failed to sync with backend: \(error.localizedDescription)")
+        }
+    }
 }
 
 enum StoreError: LocalizedError {

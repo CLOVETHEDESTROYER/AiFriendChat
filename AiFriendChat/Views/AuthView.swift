@@ -56,17 +56,22 @@ struct AuthView: View {
                 
                 // Email Text Field
                 TextField("Email", text: $email)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .keyboardType(.emailAddress)
+                    .frame(maxWidth: .infinity, minHeight: 44) // Prevent constraint issues
                     .padding()
                     .background(Color.white.opacity(0.4)) // Background for better contrast
                     .cornerRadius(15) // Rounded edges
                     .foregroundColor(.black) // Black text inside the text field
-                    .autocapitalization(.none) // Disable capitalization
-                    .textInputAutocapitalization(.never) // Disable auto-capitalization
-                    .keyboardType(.emailAddress) // Use email keyboard
                     .padding(.horizontal, 30)
                 
                 // Password Text Field
                 SecureField("Password", text: $password)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .disableAutocorrection(true)
+                    .frame(maxWidth: .infinity, minHeight: 44) // Prevent constraint issues
                     .padding()
                     .background(Color.white.opacity(0.4)) // Background for better contrast
                     .cornerRadius(15) // Rounded edges
@@ -110,6 +115,7 @@ struct AuthView: View {
             }
             .padding()
         }
+        .ignoresSafeArea(.keyboard)
         .onChange(of: authViewModel.isLoggedIn) { oldValue, newValue in
             if newValue {
                 dismiss()

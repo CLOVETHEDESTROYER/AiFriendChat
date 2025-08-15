@@ -28,6 +28,7 @@ class AuthViewModel: ObservableObject {
                 case .success(let tokenResponse):
                     self.isLoggedIn = true
                     KeychainManager.shared.saveToken(tokenResponse.accessToken, forKey: "accessToken")
+                    KeychainManager.shared.saveToken(tokenResponse.refreshToken, forKey: "refreshToken")
                     self.errorMessage = nil
                     print("Login successful. Access token: \(tokenResponse.accessToken)")
                 case .failure(let error):
@@ -47,28 +48,53 @@ class AuthViewModel: ObservableObject {
                     self.isLoggedIn = true
                     // Save access token securely
                     KeychainManager.shared.saveToken(tokenResponse.accessToken, forKey: "accessToken")
+                    KeychainManager.shared.saveToken(tokenResponse.refreshToken, forKey: "refreshToken")
                     print("Registration successful. Access token: \(tokenResponse.accessToken)")
                 case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                    print("Registration error: \(error.localizedDescription)")
+                    let desc = error.localizedDescription.lowercased()
+                    if desc.contains("unexpected") || desc.contains("500") {
+                        self.errorMessage = "Registration may have failed due to a server issue. If this email is new, try logging in instead - you might already be registered."
+                    } else if desc.contains("already exists") || desc.contains("duplicate") {
+                        self.errorMessage = "This email is already registered. Try logging in instead."
+                    } else {
+                        self.errorMessage = "Registration failed: \(error.localizedDescription)"
+                    }
+                    print("🔴 Registration error: \(desc)")
                 }
             }
         }
     }
     
     func logout() {
-        KeychainManager.shared.deleteToken(forKey: "accessToken")
-        self.isLoggedIn = false
-        self.user = nil
+        authService.logout { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(_):
+                    // Clear local data after successful API call
+                    KeychainManager.shared.deleteToken(forKey: "accessToken")
+                    KeychainManager.shared.deleteToken(forKey: "refreshToken")
+                    self.isLoggedIn = false
+                    self.user = nil
+                    print("Logout successful")
+                case .failure(let error):
+                    // Even if API call fails, clear local data for security
+                    print("Logout API call failed: \(error.localizedDescription)")
+                    KeychainManager.shared.deleteToken(forKey: "accessToken")
+                    KeychainManager.shared.deleteToken(forKey: "refreshToken")
+                    self.isLoggedIn = false
+                    self.user = nil
+                }
+            }
+        }
     }
     
     func refreshTokenIfNeeded(completion: @escaping (Bool) -> Void) {
-            guard let token = KeychainManager.shared.getToken(forKey: "accessToken") else {
+            guard let refreshToken = KeychainManager.shared.getToken(forKey: "refreshToken") else {
                 completion(false)
                 return
             }
             
-            authService.refreshToken(token: token) { result in
+            authService.refreshToken(token: refreshToken) { result in
                 DispatchQueue.main.async {
                     switch result {
                     case .success(let newToken):
@@ -77,9 +103,19 @@ class AuthViewModel: ObservableObject {
                     case .failure(_):
                         self.isLoggedIn = false
                         KeychainManager.shared.deleteToken(forKey: "accessToken")
+                        KeychainManager.shared.deleteToken(forKey: "refreshToken")
                         completion(false)
                     }
                 }
             }
         }
+
+    func handleAuthenticationError() {
+        refreshTokenIfNeeded { success in
+            if !success {
+                self.isLoggedIn = false
+                self.errorMessage = "Session expired. Please log in again."
+            }
+        }
+    }
 }

@@ -40,7 +40,7 @@ struct PremiumUpgradeButton: View {
         } label: {
             HStack {
                 Image(systemName: "star.fill")
-                Text("Upgrade to Premium - \(product.displayPrice)/month")
+                Text("Upgrade to Premium - \(product.displayPrice)/week")
             }
             .font(.headline)
             .foregroundColor(.white)

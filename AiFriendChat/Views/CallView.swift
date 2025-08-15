@@ -191,6 +191,12 @@ struct CallView: View {
                             .padding(.horizontal)
                         }
                         .disabled(phoneNumber.isEmpty || callViewModel.isCallInProgress)
+                        .overlay {
+                            if callViewModel.isCallInProgress {
+                                ProgressView()
+                                    .tint(.white)
+                            }
+                        }
                         .shake(phoneNumber.isEmpty && showAlert)
                     }
                     .padding(.vertical)

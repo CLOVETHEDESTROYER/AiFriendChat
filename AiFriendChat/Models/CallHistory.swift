@@ -2,6 +2,7 @@ import Foundation
 import SwiftData
 import SwiftUI
 
+
 @Model
 final class CallHistory {
     var id: UUID

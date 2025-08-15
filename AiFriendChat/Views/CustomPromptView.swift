@@ -50,7 +50,7 @@ struct CustomPromptView: View {
                         }
                     }
                     .padding()
-                    .frame(minHeight: UIScreen.main.bounds.height)
+                    .padding(.bottom, 100) // Add extra bottom padding to ensure content is scrollable
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -69,26 +69,60 @@ struct CustomPromptView: View {
         } message: {
             Text(alertMessage)
         }
+        .sheet(isPresented: $showingPromptDetail) {
+            AllPromptsView(savedPrompts: savedPrompts, modelContext: modelContext)
+        }
     }
     
     private var createPromptSection: some View {
         VStack(alignment: .leading, spacing: 15) {
-            TextField("Name", text: $name)
+            // Instructions
+            Text("Create your own custom call scenario. Fill in each field below:")
+                .font(.headline)
+                .foregroundColor(.white)
+                .padding(.bottom, 4)
+
+            // Scenario Name
+            TextField("Scenario Name", text: $name)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
-            
-            TextEditor(text: $prompt)
-                .frame(height: 100)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.gray.opacity(0.5))
-                )
-            
-            TextEditor(text: $persona)
-                .frame(height: 100)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.gray.opacity(0.2))
-                )
+
+            // Prompt Field
+            Text("Prompt (What should the AI say?)")
+                .font(.subheadline)
+                .foregroundColor(.white)
+            ZStack(alignment: .topLeading) {
+                if prompt.isEmpty {
+                    Text("Enter the conversation prompt here...")
+                        .foregroundColor(.gray)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 12)
+                }
+                TextEditor(text: $prompt)
+                    .frame(minHeight: 100)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 8)
+            }
+            .background(Color.white.opacity(0.1))
+            .cornerRadius(8)
+
+            // Persona Field
+            Text("Persona (Who is speaking? e.g. 'Your Mom', 'Game Show Host')")
+                .font(.subheadline)
+                .foregroundColor(.white)
+            ZStack(alignment: .topLeading) {
+                if persona.isEmpty {
+                    Text("Enter the persona description here...")
+                        .foregroundColor(.gray)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 12)
+                }
+                TextEditor(text: $persona)
+                    .frame(minHeight: 100)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 8)
+            }
+            .background(Color.white.opacity(0.1))
+            .cornerRadius(8)
             
             Picker("Voice", selection: $selectedVoice) {
                 ForEach(VoiceType.allCases, id: \.self) { voice in
@@ -388,15 +422,28 @@ struct AllPromptsView: View {
     
     var body: some View {
         NavigationView {
-            List {
-                ForEach(savedPrompts.sorted { $0.createdAt > $1.createdAt }) { prompt in
-                    SavedPromptCard(prompt: prompt) {
-                        modelContext.delete(prompt)
-                        try? modelContext.save()
+            ZStack {
+                LinearGradient(
+                    gradient: Gradient(colors: [Color("Color"), Color("Color 2")]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .edgesIgnoringSafeArea(.all)
+                
+                ScrollView {
+                    LazyVStack(spacing: 15) {
+                        ForEach(savedPrompts.sorted { $0.createdAt > $1.createdAt }) { prompt in
+                            SavedPromptCard(prompt: prompt) {
+                                modelContext.delete(prompt)
+                                try? modelContext.save()
+                            }
+                        }
                     }
+                    .padding()
                 }
             }
             .navigationTitle("All Scenarios")
+            .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Done") { dismiss() })
         }
     }

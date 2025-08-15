@@ -235,15 +235,12 @@ class BackendService: ObservableObject {
             throw BackendError.unauthorized
         }
         
-        return try await withCheckedThrowingContinuation { continuation in
-            AuthService.shared.refreshToken(token: refreshToken) { result in
-                switch result {
-                case .success(let newToken):
-                    KeychainManager.shared.saveToken(newToken, forKey: "accessToken")
-                    continuation.resume(returning: ())
-                case .failure(let error):
-                    continuation.resume(throwing: error)
-                }
+        try await AuthService.shared.refreshToken(token: refreshToken) { result in
+            switch result {
+            case .success(let newToken):
+                KeychainManager.shared.saveToken(newToken, forKey: "accessToken")
+            case .failure(let error):
+                throw error
             }
         }
     }
@@ -277,4 +274,4 @@ enum BackendError: Error, LocalizedError {
             return "Unknown error: \(message)"
         }
     }
-} 
+}

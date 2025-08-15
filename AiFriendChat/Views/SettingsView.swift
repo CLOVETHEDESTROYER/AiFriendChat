@@ -45,23 +45,17 @@ struct SettingsView: View {
                     }
                 }
                 
-                Section("Debug Options") {
-                    #if DEBUG
-                    Button("Toggle Premium Status") {
-                        purchaseManager.toggleDebugPremium()
-                    }
+                #if DEBUG
+                Section("Debug Info") {
+                    Text("Calls Made: \(purchaseManager.callsMade)")
+                    Text("Is Subscribed: \(purchaseManager.isSubscribed)")
+                    Text("Has Token: \(KeychainManager.shared.getToken(forKey: "accessToken") != nil)")
                     
-                    Button("Reset Call Count") {
-                        UserDefaults.standard.removeObject(forKey: "callsMadeCount")
-                        purchaseManager.objectWillChange.send()
+                    Button("Test Backend Connection") {
+                        testBackendConnection()
                     }
-                    
-                    Button("Clear All Data") {
-                        clearAllData()
-                    }
-                    .foregroundColor(.red)
-                    #endif
                 }
+                #endif
                 
                 Section("Account") {
                     Button(role: .destructive, action: logout) {
@@ -81,7 +75,7 @@ struct SettingsView: View {
                     Button("Cancel", role: .cancel) {}
                 }
             } message: {
-                Text("Get unlimited calls and scheduling features!")
+                Text("Get 10 minutes of call time per week and scheduling features!")
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())
@@ -103,6 +97,17 @@ struct SettingsView: View {
         let domain = Bundle.main.bundleIdentifier!
         UserDefaults.standard.removePersistentDomain(forName: domain)
         UserDefaults.standard.synchronize()
+    }
+    
+    private func testBackendConnection() {
+        Task {
+            do {
+                let stats = try await BackendService.shared.getUsageStats()
+                print("✅ Backend connection successful: \(stats)")
+            } catch {
+                print("❌ Backend connection failed: \(error)")
+            }
+        }
     }
 }
 

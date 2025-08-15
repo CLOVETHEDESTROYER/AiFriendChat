@@ -72,50 +72,41 @@ class CallService {
     
     // MARK: - Make Immediate Call
     func makeCall(phoneNumber: String, scenario: String) async throws -> String {
-        let startTime = Date()
+        // Use the backend service instead of direct API calls
+        let backendService = BackendService.shared
         
-        // Check if user can make call
-        guard try await PurchaseManager.shared.canMakeCall() else {
+        do {
+            let response = try await backendService.makeCall(phoneNumber: phoneNumber, scenario: scenario)
+            
+            // The backend handles trial tracking, so we just need to sync the response
+            await MainActor.run {
+                // Update local purchase manager with backend response
+                if !PurchaseManager.shared.isSubscribed {
+                    // Sync trial counts from backend
+                    let remaining = response.usage_stats.trial_calls_remaining
+                    let total = response.usage_stats.calls_made_total
+                    
+                    // Update local storage to match backend
+                    UserDefaults.standard.set(2 - remaining, forKey: "callsMadeCount")
+                    PurchaseManager.shared.objectWillChange.send()
+                }
+            }
+            
+            return response.call_sid
+            
+        } catch BackendError.trialExhausted {
             throw NSError(domain: "", code: -1,
                         userInfo: [NSLocalizedDescriptionKey: "You've used all your trial calls. Please subscribe to continue making calls."])
-        }
-        
-        let url = URL(string: "\(baseURL)/make-call/\(phoneNumber)/\(scenario)")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.addValue("Bearer \(KeychainManager.shared.getToken(forKey: "accessToken") ?? "")", forHTTPHeaderField: "Authorization")
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw NSError(domain: "", code: -1,
-                         userInfo: [NSLocalizedDescriptionKey: "Server error"])
-        }
-        
-        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let message = json["message"] as? String else {
-            throw NSError(domain: "", code: -1,
-                         userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])
-        }
-        
-        let endTime = Date()
-        let duration = endTime.timeIntervalSince(startTime)
-        
-        // Add call time to purchase manager
-        await MainActor.run {
-            PurchaseManager.shared.addCallTime(duration)
-        }
-        
-        // Increment call count only after successful call
-        let purchaseManager = await PurchaseManager.shared
-        if !(await purchaseManager.isSubscribed) {
-            await MainActor.run {
-                purchaseManager.incrementCallCount()
+        } catch let backendError as BackendError {
+            if case .paymentRequired(let detail) = backendError {
+                throw NSError(domain: "", code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: detail.message])
+            } else {
+                throw backendError
             }
+        } catch {
+            throw error
         }
-        
-        return message
     }
     
     // MARK: - Update User Name
@@ -210,72 +201,7 @@ class CallService {
     }
     
     func makeCustomCall(phoneNumber: String, scenarioId: String) async throws -> String {
-        let startTime = Date()
-        let purchaseManager = await PurchaseManager.shared
-        
-        // Check subscription and trial status
-        guard try await purchaseManager.canMakeCall() else {
-            throw NSError(domain: "", code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: "You've used all your trial calls. Please subscribe to continue making calls."])
-        }
-        
-        // Increment call count BEFORE making the call if not subscribed
-        if !(await purchaseManager.isSubscribed) {
-            await MainActor.run {
-                purchaseManager.incrementCallCount()
-            }
-        }
-        
-        do {
-            // Make the API call
-            let url = URL(string: "\(baseURL)/make-custom-call/\(phoneNumber)/\(scenarioId)")!
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.addValue("Bearer \(KeychainManager.shared.getToken(forKey: "accessToken") ?? "")", forHTTPHeaderField: "Authorization")
-            
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
-                // If call fails, decrement the count
-                if !(await purchaseManager.isSubscribed) {
-                    await MainActor.run {
-                        purchaseManager.decrementCallCount()
-                    }
-                }
-                throw NSError(domain: "", code: -1,
-                             userInfo: [NSLocalizedDescriptionKey: "Failed to initiate custom call"])
-            }
-            
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let message = json["message"] as? String else {
-                // If call fails, decrement the count
-                if !(await purchaseManager.isSubscribed) {
-                    await MainActor.run {
-                        purchaseManager.decrementCallCount()
-                    }
-                }
-                throw NSError(domain: "", code: -1,
-                             userInfo: [NSLocalizedDescriptionKey: "Invalid response format"])
-            }
-            
-            let endTime = Date()
-            let duration = endTime.timeIntervalSince(startTime)
-            
-            // Add call time to purchase manager
-            await MainActor.run {
-                PurchaseManager.shared.addCallTime(duration)
-            }
-            
-            return message
-        } catch {
-            // If call fails, decrement the count
-            if !(await purchaseManager.isSubscribed) {
-                await MainActor.run {
-                    purchaseManager.decrementCallCount()
-                }
-            }
-            throw error
-        }
+        // For now, use regular call endpoint since mobile/make-call handles scenarios
+        return try await makeCall(phoneNumber: phoneNumber, scenario: scenarioId)
     }
 }

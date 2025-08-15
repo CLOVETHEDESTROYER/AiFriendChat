@@ -73,11 +73,11 @@
   },
   "subscriptionGroups" : [
     {
-      "id" : "20001",
+      "id" : "21721959",
       "localizations" : [
         {
-          "description" : "Access to premium features",
-          "displayName" : "Premium Subscription",
+          "description" : "Access to premium AI calling features",
+          "displayName" : "Premium Features",
           "locale" : "en_US"
         }
       ],
@@ -90,22 +90,22 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "19.99",
+          "displayPrice" : "4.99",
           "familyShareable" : false,
           "groupNumber" : 1,
-          "internalID" : "com.aifriendchat.monthly_subscription",
+          "internalID" : "com.aifriendchat.premium.weekly.v2",
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "Unlimited AI conversations and premium features",
-              "displayName" : "Premium Monthly",
+              "description" : "Unlock AI voice calls with Premium Weekly! Make calls to any phone number and chat with AI characters. Includes call scheduling, custom AI prompts, and 10 minutes of talk time per week.",
+              "displayName" : "Premium Weekly",
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.aifriendchat.monthly_subscription",
-          "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "Premium Monthly",
-          "subscriptionGroupID" : "20001",
+          "productID" : "com.aifriendchat.premium.weekly.v2",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "AI Friend Chat Premium Weekly",
+          "subscriptionGroupID" : "21721959",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 

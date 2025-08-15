@@ -64,7 +64,7 @@ private struct PremiumUpgradeSection: View {
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                 
-                Text("Get unlimited calls and custom scenarios")
+                Text("Get 10 minutes of call time per week and custom scenarios")
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)
             }
@@ -72,7 +72,7 @@ private struct PremiumUpgradeSection: View {
             
             // Features List
             VStack(alignment: .leading, spacing: 12) {
-                FeatureRow(icon: "infinity", text: "20 minutes of call time per month")
+                FeatureRow(icon: "infinity", text: "10 minutes of call time per week")
                 FeatureRow(icon: "calendar", text: "Schedule calls in advance")
                 FeatureRow(icon: "text.bubble", text: "Custom conversation scenarios")
                 FeatureRow(icon: "person.2", text: "Priority support")

@@ -129,7 +129,7 @@ struct AccountView: View {
                     Button("Cancel", role: .cancel) {}
                 }
             } message: {
-                Text("Get unlimited calls and scheduling features with our Premium subscription!")
+                Text("Get 10 minutes of call time per week and scheduling features with our Premium subscription!")
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())

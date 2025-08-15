@@ -72,8 +72,9 @@ class ScheduleCallViewModel: ObservableObject {
                     isLoading = false
                     showSuccessAlert = true
                 } else {
+                    let formattedPhone = phoneNumber.starts(with: "+") ? phoneNumber : "+1" + phoneNumber.filter { $0.isNumber }
                     _ = try await callService.scheduleCall(
-                        phoneNumber: phoneNumber,
+                        phoneNumber: formattedPhone,
                         scheduledTime: selectedDate,
                         scenario: selectedScenario
                     )
@@ -90,8 +91,10 @@ class ScheduleCallViewModel: ObservableObject {
     }
     
     private func validatePhoneNumber() -> Bool {
-        let digitsOnly = phoneNumber.filter { $0.isNumber }
-        return digitsOnly.count == 10
+        // Support E.164: optional +, 1-15 digits
+        let phonePattern = "^\\+?\\d{1,15}$"
+        let predicate = NSPredicate(format: "SELF MATCHES %@", phonePattern)
+        return predicate.evaluate(with: phoneNumber.filter { $0.isNumber || $0 == "+" })
     }
     
     func makeCall() {
@@ -105,8 +108,9 @@ class ScheduleCallViewModel: ObservableObject {
         
         Task {
             do {
+                let formattedPhone = phoneNumber.starts(with: "+") ? phoneNumber : "+1" + phoneNumber.filter { $0.isNumber }
                 let message = try await callService.makeCall(
-                    phoneNumber: phoneNumber,
+                    phoneNumber: formattedPhone,
                     scenario: selectedScenario
                 )
                 isLoading = false

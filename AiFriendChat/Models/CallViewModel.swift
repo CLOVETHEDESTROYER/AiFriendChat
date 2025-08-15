@@ -33,6 +33,8 @@ class CallViewModel: ObservableObject {
             return
         }
         
+        let formattedPhone = phoneNumber.starts(with: "+") ? phoneNumber : "+1" + phoneNumber.filter { $0.isNumber }
+        
         Task {
             // First check if user can make call
             let remainingCalls = purchaseManager.getRemainingTrialCalls()
@@ -67,7 +69,7 @@ class CallViewModel: ObservableObject {
                 // Use the makeCustomCall endpoint
                 do {
                     let message = try await CallService.shared.makeCustomCall(
-                        phoneNumber: phoneNumber,
+                        phoneNumber: formattedPhone,
                         scenarioId: scenarioId
                     )
                     setSuccessMessage(message)
@@ -82,7 +84,7 @@ class CallViewModel: ObservableObject {
                 }
             } else {
                 // Handle regular scenarios
-                performCall(phoneNumber: phoneNumber, scenario: scenario)
+                performCall(phoneNumber: formattedPhone, scenario: scenario)
             }
         }
     }
@@ -109,13 +111,13 @@ class CallViewModel: ObservableObject {
                         self.upgradeMessage = errorMessage
                         self.showUpgradePrompt = true
                     } else if errorMessage.contains("authentication") || errorMessage.contains("unauthorized") {
-                        self.setErrorMessage("Authentication failed. Please log in again.")
-                    } else if errorMessage.contains("server") {
-                        self.setErrorMessage("Server error. Please try again later.")
+                        self.setErrorMessage("Your session expired. Please log in again to continue.")
+                    } else if errorMessage.contains("server") || errorMessage.contains("500") {
+                        self.setErrorMessage("Our servers are busy right now. Please try again in a moment.")
                     } else if errorMessage.contains("network") {
-                        self.setErrorMessage("Network connection error. Please check your internet connection.")
+                        self.setErrorMessage("Network connection issue. Check your internet and try again.")
                     } else {
-                        self.setErrorMessage("Unexpected error: \(errorMessage)")
+                        self.setErrorMessage("Something went wrong: \(errorMessage)")
                     }
                 }
             }
