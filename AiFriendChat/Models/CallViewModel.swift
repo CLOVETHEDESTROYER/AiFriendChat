@@ -31,6 +31,13 @@ class CallViewModel: ObservableObject {
     private let modelContext: ModelContext
     private var callTimer: Timer?
     
+    // Add this property to CallViewModel
+    @Published var authenticationRequired = false
+    
+    // Add these properties to CallViewModel
+    @Published var showPremiumPrompt = false
+    @Published var premiumPromptMessage = ""
+    
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
     }
@@ -60,6 +67,10 @@ class CallViewModel: ObservableObject {
                     
                     // Update usage stats display
                     self.updateUsageStatsFromResponse(response.usage_stats)
+                    
+                    // Check if user should see premium prompt - convert to UsageStats
+                    let convertedStats = self.convertUsageStatsUpdateToUsageStats(response.usage_stats)
+                    self.checkAndShowPremiumPrompt(usageStats: convertedStats)
                 }
                 
             } catch BackendError.trialExhausted {
@@ -88,13 +99,21 @@ class CallViewModel: ObservableObject {
         print("🔴 Call initiation error: \(error.localizedDescription)")
         print("🔴 Error type: \(type(of: error))")
         
+        if case BackendError.unauthorized = error {
+            // Signal that authentication is required
+            self.authenticationRequired = true
+            self.setErrorMessage("Session expired. Please log in again.")
+            return
+        }
+        
         let errorMessage = error.localizedDescription.lowercased()
         
         if errorMessage.contains("trial calls") || errorMessage.contains("subscribe") {
             self.upgradeMessage = error.localizedDescription
             self.showUpgradePrompt = true
         } else if errorMessage.contains("authentication") || errorMessage.contains("unauthorized") {
-            self.setErrorMessage("Your session expired. Please log in again to continue.")
+            self.authenticationRequired = true
+            self.setErrorMessage("Session expired. Please log in again.")
         } else if errorMessage.contains("server") || errorMessage.contains("500") {
             self.setErrorMessage("Our servers are busy right now. Please try again in a moment.")
         } else if errorMessage.contains("network") {
@@ -108,16 +127,18 @@ class CallViewModel: ObservableObject {
     private func startCallTimer() {
         isCallInProgress = true
         callTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            
-            if self.currentCallDuration >= TimeInterval(self.callDurationLimit) {
-                self.endCall()
-            } else {
-                self.currentCallDuration += 1
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
                 
-                // Show warning when approaching limit (10 seconds before)
-                if self.currentCallDuration >= TimeInterval(self.callDurationLimit - 10) {
-                    self.showDurationWarning = true
+                if self.currentCallDuration >= TimeInterval(self.callDurationLimit) {
+                    self.endCall()
+                } else {
+                    self.currentCallDuration += 1
+                    
+                    // Show warning when approaching limit (10 seconds before)
+                    if self.currentCallDuration >= TimeInterval(self.callDurationLimit - 10) {
+                        self.showDurationWarning = true
+                    }
                 }
             }
         }
@@ -232,5 +253,49 @@ class CallViewModel: ObservableObject {
         let callHistory = CallHistory(phoneNumber: phoneNumber, scenario: scenario, status: status, duration: duration)
         modelContext.insert(callHistory)
         try? modelContext.save()
+    }
+
+    private func checkAndShowPremiumPrompt(usageStats: UsageStats?) {
+        Task { @MainActor in
+            // Show premium prompt if user is not subscribed and has used trial calls
+            let purchaseManager = PurchaseManager.shared
+            guard !purchaseManager.isSubscribed else { return }
+            
+            if let stats = usageStats {
+                let remainingCalls = stats.trial_calls_remaining
+                if remainingCalls <= 1 {
+                    self.premiumPromptMessage = remainingCalls == 0 ? 
+                        "🎉 Great call! You've used all your trial calls. Upgrade to Premium for unlimited calls!" :
+                        "🎉 Great call! You have \(remainingCalls) trial call remaining. Upgrade to Premium for unlimited calls!"
+                    self.showPremiumPrompt = true
+                }
+            }
+        }
+    }
+
+    // Fix 4: Add conversion helper method
+    private func convertUsageStatsUpdateToUsageStats(_ update: UsageStatsUpdate) -> UsageStats? {
+        // Convert UsageStatsUpdate to UsageStats for compatibility
+        guard let currentStats = usageStats else { return nil }
+        
+        return UsageStats(
+            app_type: currentStats.app_type,
+            is_trial_active: currentStats.is_trial_active,
+            trial_calls_remaining: update.calls_remaining_this_week ?? currentStats.trial_calls_remaining,
+            trial_calls_used: currentStats.trial_calls_used + 1,
+            calls_made_today: currentStats.calls_made_today + 1,
+            calls_made_this_week: currentStats.calls_made_this_week + 1,
+            calls_made_this_month: currentStats.calls_made_this_month + 1,
+            calls_made_total: currentStats.calls_made_total + 1,
+            is_subscribed: currentStats.is_subscribed,
+            subscription_tier: currentStats.subscription_tier,
+            upgrade_recommended: update.upgrade_recommended,
+            total_call_duration_this_week: currentStats.total_call_duration_this_week,
+            total_call_duration_this_month: currentStats.total_call_duration_this_month,
+            addon_calls_remaining: update.addon_calls_remaining,
+            addon_calls_expiry: currentStats.addon_calls_expiry,
+            week_start_date: currentStats.week_start_date,
+            month_start_date: currentStats.month_start_date
+        )
     }
 }

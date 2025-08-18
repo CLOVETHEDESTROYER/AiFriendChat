@@ -1,157 +1,228 @@
-# Backend Enhancement Request: User Profile Management
+# Backend Enhancement Request: Mobile App Integration Issues
 
-## 🐛 Issue Found
-**Problem**: iOS app is trying to call `/update-user-name` endpoint which returns 404 "Not Found"
-**Error**: `{"detail":"Not Found"}` when attempting to update username
+## 🚨 Critical Issues Found
 
-## 📱 Current Frontend Implementation Status
-- ✅ **FIXED**: Frontend now handles username updates locally as a temporary solution
-- ✅ Username is stored in UserDefaults and persists across app launches
-- ✅ User experience is maintained with proper loading states
-- ✅ No more crashes or 404 errors
+### **1. Mobile Scenarios Missing Persona/Prompt Data**
 
-## 🎯 Backend Enhancement Needed
+**Problem**: Mobile scenarios endpoint (`/mobile/scenarios`) returns only metadata, missing the crucial persona/prompt/voice_config that the voice agent needs.
 
-### **New Endpoint Required: User Profile Management**
-
-#### **POST /mobile/user/profile**
-**Purpose**: Update user profile information (starting with display name)
-
-**Headers Required**:
-- `Authorization: Bearer <token>`
-- `X-App-Type: mobile`
-- `Content-Type: application/json`
-
-**Request Body**:
+**Current Response**:
 ```json
 {
-  "display_name": "John Smith",
-  "preferences": {
-    "voice_preference": "alloy",
-    "default_scenario": "default"
-  }
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "message": "Profile updated successfully",
-  "user_profile": {
-    "display_name": "John Smith",
-    "email": "user@example.com",
-    "preferences": {
-      "voice_preference": "alloy",
-      "default_scenario": "default"
-    },
-    "updated_at": "2024-01-15T10:30:00Z"
-  }
-}
-```
-
-#### **GET /mobile/user/profile**
-**Purpose**: Retrieve user profile information
-
-**Headers Required**:
-- `Authorization: Bearer <token>`
-- `X-App-Type: mobile`
-
-**Response**:
-```json
-{
-  "user_profile": {
-    "display_name": "John Smith",
-    "email": "user@example.com",
-    "created_at": "2024-01-01T10:00:00Z",
-    "preferences": {
-      "voice_preference": "alloy",
-      "default_scenario": "default"
+  "scenarios": [
+    {
+      "id": "fake_doctor",
+      "name": "Fake Doctor Call", 
+      "description": "Emergency exit with medical urgency",
+      "icon": "🏥",
+      "category": "emergency_exit",
+      "difficulty": "easy"
     }
-  }
+  ]
 }
 ```
 
-### **Database Schema Enhancement**
-
-Add to existing `mobile_users` table or create new `user_profiles` table:
-
-```sql
--- Option 1: Add to existing mobile_users table
-ALTER TABLE mobile_users ADD COLUMN display_name VARCHAR(100);
-ALTER TABLE mobile_users ADD COLUMN voice_preference VARCHAR(20);
-ALTER TABLE mobile_users ADD COLUMN default_scenario VARCHAR(50);
-ALTER TABLE mobile_users ADD COLUMN profile_updated_at TIMESTAMP;
-
--- Option 2: Create separate user_profiles table
-CREATE TABLE user_profiles (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES mobile_users(id),
-    display_name VARCHAR(100),
-    voice_preference VARCHAR(20) DEFAULT 'alloy',
-    default_scenario VARCHAR(50) DEFAULT 'default',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-## 🚀 Implementation Priority
-
-### **Phase 1: Basic Profile Management (High Priority)**
-1. Add `display_name` field to user management
-2. Implement `/mobile/user/profile` GET/POST endpoints
-3. Basic validation and error handling
-
-### **Phase 2: Enhanced Preferences (Medium Priority)**
-1. Voice preference storage
-2. Default scenario preference
-3. Enhanced user experience settings
-
-### **Phase 3: Advanced Features (Low Priority)**
-1. Profile pictures/avatars
-2. Call history preferences
-3. Notification settings
-
-## 📱 Frontend Migration Plan
-
-### **Current Status (Working)**
-- Username updates work locally using UserDefaults
-- No app crashes or errors
-- User experience is maintained
-
-### **When Backend is Ready**
-- Frontend will detect if backend supports profile endpoints
-- Gradually migrate from local storage to backend storage
-- Maintain backward compatibility during transition
-
-### **Code Changes Needed (Frontend)**
-```swift
-// Enhanced BackendService method
-func updateUserProfile(displayName: String) async throws -> UserProfile {
-    // Try new endpoint first
-    do {
-        return try await updateUserProfileOnBackend(displayName: displayName)
-    } catch {
-        // Fallback to local storage
-        UserDefaults.standard.set(displayName, forKey: "userName")
-        return UserProfile(displayName: displayName, isLocal: true)
+**Required Response** (like test scenarios):
+```json
+{
+  "scenarios": [
+    {
+      "id": "fake_doctor",
+      "name": "Fake Doctor Call",
+      "description": "Emergency exit with medical urgency",
+      "icon": "🏥",
+      "category": "emergency_exit",
+      "difficulty": "easy",
+      "persona": "You are Dr. Smith, a concerned physician...",
+      "prompt": "Emergency medical call about urgent health issue...",
+      "voice_config": {
+        "voice": "coral",
+        "temperature": 0.8
+      }
     }
+  ]
 }
 ```
 
-## ✅ Immediate Action Items for Backend Team
-
-1. **High Priority**: Add basic profile endpoints to prevent 404 errors
-2. **Medium Priority**: Implement user preferences storage
-3. **Low Priority**: Add advanced profile features
-
-## 📊 Benefits of This Enhancement
-
-- **Better User Experience**: Persistent user profiles across devices
-- **Feature Expansion**: Foundation for user customization
-- **Data Analytics**: Better user behavior insights
-- **App Store Readiness**: More complete user management system
+**Impact**: Users get default persona ("Mike Thompson") instead of scenario-specific personas, breaking the core functionality.
 
 ---
 
-**Note**: The iOS app is currently working perfectly with the local storage solution. This enhancement will improve the overall system architecture and prepare for future features, but it's not blocking the app from functioning or being submitted to the App Store.
+### **2. Mobile Onboarding Endpoints Missing**
+
+**Problem**: The mobile app expects onboarding endpoints that don't exist on the backend.
+
+**Missing Endpoints**:
+- `POST /onboarding/initialize` - Initialize onboarding for new user
+- `POST /onboarding/complete-step` - Complete individual onboarding steps
+- `GET /onboarding/status` - Get onboarding completion status
+
+**Current Error**: `HTTP 400` when trying to complete onboarding steps.
+
+**Impact**: New users can't complete onboarding, breaking the user experience flow.
+
+---
+
+### **3. Scenario ID Mismatch Between Endpoints**
+
+**Problem**: Different endpoints expect different scenario formats.
+
+**Test Endpoints** (`/testing/*`):
+- Use scenarios like: `"sister_emergency"`, `"long_distance_love"`, `"caring_sibling"`
+- Have full persona/prompt data
+- Work correctly with voice agent
+
+**Mobile Endpoints** (`/mobile/*`):
+- Use scenarios like: `"fake_doctor"`, `"fake_celebrity"`, `"fake_boss"`
+- Missing persona/prompt data
+- Voice agent falls back to default
+
+---
+
+## 🔧 Required Backend Changes
+
+### **Priority 1: Fix Mobile Scenarios Data**
+
+**Option A: Enhance Existing Endpoint**
+```python
+# Modify /mobile/scenarios to include full scenario data
+@app.get("/mobile/scenarios")
+async def get_mobile_scenarios(include_details: bool = True):
+    if include_details:
+        # Return full scenario data with persona/prompt
+        return get_full_scenario_data()
+    else:
+        # Return current metadata-only response
+        return get_scenario_metadata()
+```
+
+**Option B: New Detailed Endpoint**
+```python
+# New endpoint for detailed scenario data
+@app.get("/mobile/scenarios/{scenario_id}/details")
+async def get_scenario_details(scenario_id: str):
+    return get_scenario_with_persona_prompt(scenario_id)
+```
+
+### **Priority 2: Implement Mobile Onboarding**
+
+```python
+# New onboarding endpoints
+@app.post("/onboarding/initialize")
+async def initialize_onboarding(user_id: int):
+    return {"status": "initialized", "current_step": 1}
+
+@app.post("/onboarding/complete-step")
+async def complete_onboarding_step(user_id: int, step: int, data: dict):
+    return {"status": "completed", "next_step": step + 1}
+
+@app.get("/onboarding/status")
+async def get_onboarding_status(user_id: int):
+    return {"completed": False, "current_step": 2, "total_steps": 3}
+```
+
+### **Priority 3: Standardize Scenario System**
+
+**Recommendation**: Use the test scenario format for all endpoints.
+
+**Current Test Scenarios** (working):
+```json
+{
+  "sister_emergency": {
+    "persona": "You are Sarah, a 35-year-old woman...",
+    "prompt": "Call your sibling about mom's accident...",
+    "voice_config": {"voice": "coral", "temperature": 0.8}
+  }
+}
+```
+
+**Convert Mobile Scenarios** to match this format:
+```json
+{
+  "fake_doctor": {
+    "persona": "You are Dr. Smith, an emergency physician...",
+    "prompt": "Emergency medical call requiring immediate attention...",
+    "voice_config": {"voice": "coral", "temperature": 0.7}
+  }
+}
+```
+
+---
+
+## 📱 Frontend Impact
+
+### **Current iOS App Status**
+- ✅ Registration works
+- ✅ Login works  
+- ✅ Calls are initiated successfully
+- ❌ Wrong personas used (default instead of scenario-specific)
+- ❌ Onboarding flow broken
+- ❌ Scenario selection doesn't work as expected
+
+### **After Backend Fixes**
+- ✅ All scenarios will use correct personas
+- ✅ Onboarding will complete properly
+- ✅ User experience will be fully functional
+
+---
+
+## 🚀 Implementation Priority
+
+### **Phase 1 (Immediate - 1-2 days)**
+1. Fix mobile scenarios to include persona/prompt data
+2. Test with existing mobile endpoints
+
+### **Phase 2 (Short-term - 3-5 days)**  
+1. Implement mobile onboarding endpoints
+2. Standardize scenario format across all endpoints
+
+### **Phase 3 (Long-term - 1-2 weeks)**
+1. Add new mobile-specific scenarios
+2. Enhance voice agent integration
+3. Add scenario analytics and usage tracking
+
+---
+
+## 🔍 Testing Requirements
+
+### **Mobile Scenarios Test**
+1. Call `/mobile/scenarios` - should return full scenario data
+2. Make call with `fake_doctor` - should use doctor persona, not default
+3. Verify all mobile scenarios have unique personas
+
+### **Onboarding Test**
+1. Register new user
+2. Complete onboarding steps
+3. Verify onboarding status updates correctly
+
+### **Integration Test**
+1. Test call flow from registration → onboarding → first call
+2. Verify scenario personas work correctly
+3. Check rate limiting and subscription features
+
+---
+
+## 📋 Backend Team Action Items
+
+1. **Review current scenario data structure**
+2. **Identify which scenarios need persona/prompt data**
+3. **Implement mobile onboarding endpoints**
+4. **Test mobile scenarios with voice agent**
+5. **Verify scenario ID consistency across endpoints**
+6. **Update API documentation**
+
+---
+
+## 💬 Questions for Backend Team
+
+1. **Do you have the persona/prompt data for mobile scenarios?**
+2. **Should we use test scenario format for all endpoints?**
+3. **What's the preferred approach for mobile onboarding?**
+4. **Are there any voice agent configuration requirements?**
+5. **What's the timeline for implementing these changes?**
+
+---
+
+**Priority**: 🔴 **HIGH** - Core functionality broken  
+**Effort**: 🟡 **MEDIUM** - Data structure changes + new endpoints  
+**Impact**: 🟢 **HIGH** - Fixes entire user experience flow

@@ -52,6 +52,14 @@
 		C0CC99D12E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99CF2E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift */; };
 		C0CC99D22E4FD5C5001CED3E /* EnhancedUsageStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99D02E4FD5C5001CED3E /* EnhancedUsageStatsView.swift */; };
 		C0CC99D42E4FDBAE001CED3E /* EnhancedVoiceSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99D32E4FDBAE001CED3E /* EnhancedVoiceSelectionView.swift */; };
+		C0CC99D62E500844001CED3E /* OnboardingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99D52E500844001CED3E /* OnboardingModels.swift */; };
+		C0CC99D82E500875001CED3E /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99D72E500875001CED3E /* OnboardingViewModel.swift */; };
+		C0CC99DB2E5008A7001CED3E /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99DA2E5008A7001CED3E /* OnboardingView.swift */; };
+		C0CC99DC2E5008A7001CED3E /* onboarding.md in Resources */ = {isa = PBXBuildFile; fileRef = C0CC99D92E5008A7001CED3E /* onboarding.md */; };
+		C0CC99DF2E5008CB001CED3E /* OnboardingTextFieldStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99DE2E5008CB001CED3E /* OnboardingTextFieldStyle.swift */; };
+		C0CC99E02E5008CB001CED3E /* CustomTextFieldStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99DD2E5008CB001CED3E /* CustomTextFieldStyle.swift */; };
+		C0CC99E92E500965001CED3E /* RealtimeCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99E82E500965001CED3E /* RealtimeCallView.swift */; };
+		C0CC99EA2E500965001CED3E /* EULAView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99E72E500965001CED3E /* EULAView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -122,6 +130,14 @@
 		C0CC99CF2E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedScenarioSelectionView.swift; sourceTree = "<group>"; };
 		C0CC99D02E4FD5C5001CED3E /* EnhancedUsageStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedUsageStatsView.swift; sourceTree = "<group>"; };
 		C0CC99D32E4FDBAE001CED3E /* EnhancedVoiceSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedVoiceSelectionView.swift; sourceTree = "<group>"; };
+		C0CC99D52E500844001CED3E /* OnboardingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingModels.swift; sourceTree = "<group>"; };
+		C0CC99D72E500875001CED3E /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
+		C0CC99D92E5008A7001CED3E /* onboarding.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = onboarding.md; sourceTree = "<group>"; };
+		C0CC99DA2E5008A7001CED3E /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		C0CC99DD2E5008CB001CED3E /* CustomTextFieldStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTextFieldStyle.swift; sourceTree = "<group>"; };
+		C0CC99DE2E5008CB001CED3E /* OnboardingTextFieldStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingTextFieldStyle.swift; sourceTree = "<group>"; };
+		C0CC99E72E500965001CED3E /* EULAView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EULAView.swift; sourceTree = "<group>"; };
+		C0CC99E82E500965001CED3E /* RealtimeCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeCallView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -172,6 +188,7 @@
 		9D1E6C522D418B80004F7125 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				C0CC99D52E500844001CED3E /* OnboardingModels.swift */,
 				9DFC07D52D5BDCB700E88B1B /* SavedPrompt.swift */,
 				9DDE9E242D586585009FBE55 /* CallHistory.swift */,
 				9D1E6C4D2D418B80004F7125 /* CallSchedule.swift */,
@@ -215,6 +232,7 @@
 		9D1E6C5F2D418B80004F7125 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				C0CC99D72E500875001CED3E /* OnboardingViewModel.swift */,
 				9D1E6C5C2D418B80004F7125 /* AuthViewModel.swift */,
 				9D1E6C5D2D418B80004F7125 /* HomeViewModel.swift */,
 				9D1E6C5E2D418B80004F7125 /* ScheduleCallViewModel.swift */,
@@ -225,6 +243,10 @@
 		9D1E6C652D418B80004F7125 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				C0CC99E72E500965001CED3E /* EULAView.swift */,
+				C0CC99E82E500965001CED3E /* RealtimeCallView.swift */,
+				C0CC99D92E5008A7001CED3E /* onboarding.md */,
+				C0CC99DA2E5008A7001CED3E /* OnboardingView.swift */,
 				C0CC99D32E4FDBAE001CED3E /* EnhancedVoiceSelectionView.swift */,
 				C0CC99CF2E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift */,
 				C0CC99D02E4FD5C5001CED3E /* EnhancedUsageStatsView.swift */,
@@ -272,6 +294,8 @@
 		9D2571D02D5659AA00FDB900 /* Modifiers */ = {
 			isa = PBXGroup;
 			children = (
+				C0CC99DD2E5008CB001CED3E /* CustomTextFieldStyle.swift */,
+				C0CC99DE2E5008CB001CED3E /* OnboardingTextFieldStyle.swift */,
 				9D2571CF2D5659AA00FDB900 /* AuthPromptModifier.swift */,
 			);
 			path = Modifiers;
@@ -435,6 +459,7 @@
 			files = (
 				9D1E6C6D2D418B80004F7125 /* Assets.xcassets in Resources */,
 				C089B0F42E0F32180034854F /* Configuration.storekit in Resources */,
+				C0CC99DC2E5008A7001CED3E /* onboarding.md in Resources */,
 				9D1E6C6E2D418B80004F7125 /* Preview Assets.xcassets in Resources */,
 				9D33C88B2CEF902200902E96 /* File.txt in Resources */,
 			);
@@ -461,12 +486,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0CC99D62E500844001CED3E /* OnboardingModels.swift in Sources */,
 				9D2571D12D5659AA00FDB900 /* AuthPromptModifier.swift in Sources */,
 				C0CC99D42E4FDBAE001CED3E /* EnhancedVoiceSelectionView.swift in Sources */,
 				9D6013002D48926F00F566C2 /* CallHistoryView.swift in Sources */,
+				C0CC99E92E500965001CED3E /* RealtimeCallView.swift in Sources */,
+				C0CC99EA2E500965001CED3E /* EULAView.swift in Sources */,
 				9DFC07D62D5BDCB700E88B1B /* SavedPrompt.swift in Sources */,
 				9D6013012D48926F00F566C2 /* AccountView.swift in Sources */,
 				9D6013022D48926F00F566C2 /* SettingsView.swift in Sources */,
+				C0CC99DF2E5008CB001CED3E /* OnboardingTextFieldStyle.swift in Sources */,
+				C0CC99E02E5008CB001CED3E /* CustomTextFieldStyle.swift in Sources */,
 				9D6013032D48926F00F566C2 /* HelpSupportView.swift in Sources */,
 				9D1E6C702D418B80004F7125 /* AuthViewModel.swift in Sources */,
 				9D1E6C712D418B80004F7125 /* AiFriendChatApp.swift in Sources */,
@@ -481,6 +511,7 @@
 				C0CB9E242E2801DB00D74546 /* BackendService.swift in Sources */,
 				9D1E6C7A2D418B80004F7125 /* NetworkManager.swift in Sources */,
 				9D1E6C7B2D418B80004F7125 /* CallService.swift in Sources */,
+				C0CC99DB2E5008A7001CED3E /* OnboardingView.swift in Sources */,
 				9D1E6C7C2D418B80004F7125 /* RegisterView.swift in Sources */,
 				9D2571C62D55D6FA00FDB900 /* ScheduleView.swift in Sources */,
 				9D1E6C7D2D418B80004F7125 /* KeychainManager.swift in Sources */,
@@ -496,6 +527,7 @@
 				9D2B94532D56C84400371F0D /* PremiumUpgradeButton.swift in Sources */,
 				9DDE9E252D586585009FBE55 /* CallHistory.swift in Sources */,
 				9D1E6C832D418B80004F7125 /* Extensions.swift in Sources */,
+				C0CC99D82E500875001CED3E /* OnboardingViewModel.swift in Sources */,
 				9D2571CA2D55D73000FDB900 /* CustomPromptView.swift in Sources */,
 				9D1E6C842D418B80004F7125 /* HomeViewModel.swift in Sources */,
 				C0CC99D12E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift in Sources */,

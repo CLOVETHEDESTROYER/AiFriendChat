@@ -165,7 +165,9 @@ class BackendService: ObservableObject {
     
     // MARK: - Enhanced Make Call
     func makeCall(phoneNumber: String, scenario: String) async throws -> CallResponse {
-        // First check permission
+        // Always use production endpoint for consistent response format and proper rate limiting
+        // Debug premium can still be used for testing subscription features without bypassing limits
+        
         let permission = try await checkCallPermission()
         
         if !permission.can_make_call {
@@ -254,12 +256,14 @@ class BackendService: ObservableObject {
     // MARK: - Helper Methods
     private func getAuthHeaders() -> [String: String] {
         guard let token = KeychainManager.shared.getToken(forKey: "accessToken") else {
+            print("⚠️ No access token found - user should not be able to make calls")
             return [
                 "X-App-Type": "mobile",
                 "User-Agent": "Speech-Assistant-Mobile-iOS/1.0"
             ]
         }
         
+        print("✅ Using access token for request")
         return [
             "Authorization": "Bearer \(token)",
             "X-App-Type": "mobile",
@@ -322,6 +326,165 @@ class BackendService: ObservableObject {
             }
         }
     }
+    
+    // MARK: - Mobile Onboarding Methods
+    
+    /// Get onboarding status for mobile user
+    func getOnboardingStatus() async throws -> OnboardingStatus {
+        let request = try createAuthenticatedRequest(
+            endpoint: "/onboarding/status",
+            method: "GET"
+        )
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try handleHTTPResponse(response)
+        
+        // The web backend returns a complex structure, we need to adapt it for mobile
+        let webResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        
+        // Convert web backend response to mobile format
+        return adaptWebOnboardingToMobile(webResponse)
+    }
+    
+    /// Initialize onboarding for new mobile user (simplified)
+    func initializeOnboarding() async throws -> OnboardingStatus {
+        let request = try createAuthenticatedRequest(
+            endpoint: "/onboarding/initialize",
+            method: "POST"
+        )
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try handleHTTPResponse(response)
+        
+        let webResponse = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        return adaptWebOnboardingToMobile(webResponse)
+    }
+    
+    /// Complete a mobile onboarding step
+    func completeOnboardingStep(_ step: OnboardingStep, data: [String: Any]? = nil) async throws -> OnboardingStepResponse {
+        var requestData: [String: Any] = ["step": step.rawValue]
+        if let data = data {
+            requestData["data"] = data
+        }
+        
+        let request = try createAuthenticatedRequest(
+            endpoint: "/onboarding/complete-step",
+            method: "POST",
+            body: requestData
+        )
+        
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        try handleHTTPResponse(response)
+        
+        return try JSONDecoder().decode(OnboardingStepResponse.self, from: responseData)
+    }
+    
+    /// Save user profile during onboarding
+    func saveOnboardingProfile(_ profile: OnboardingProfile) async throws {
+        let profileData: [String: Any] = [
+            "name": profile.name,
+            "phone_number": profile.phoneNumber ?? "",
+            "preferred_voice": profile.preferredVoice,
+            "notifications_enabled": profile.notificationsEnabled
+        ]
+        
+        _ = try await completeOnboardingStep(.profile, data: profileData)
+    }
+    
+    // MARK: - Private Helper Methods for Onboarding
+    
+    private func createAuthenticatedRequest(endpoint: String, method: String, body: [String: Any]? = nil) throws -> URLRequest {
+        let url = URL(string: "\(baseURL)\(endpoint)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        
+        let headers = getAuthHeaders()
+        headers.forEach { key, value in
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        
+        if let body = body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        }
+        
+        return request
+    }
+    
+    private func handleHTTPResponse(_ response: URLResponse) throws {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw BackendError.networkError
+        }
+        
+        switch httpResponse.statusCode {
+        case 200...299:
+            return
+        case 401:
+            throw BackendError.unauthorized
+        case 402:
+            throw BackendError.paymentRequired(PaymentDetail(error: "Payment required", message: "Payment required", upgrade_options: nil, timestamp: nil))
+        case 500:
+            throw BackendError.serverError
+        default:
+            throw BackendError.unknown("HTTP \(httpResponse.statusCode)")
+        }
+    }
+    
+    private func adaptWebOnboardingToMobile(_ webResponse: [String: Any]) -> OnboardingStatus {
+        // The web backend has 4 steps: phone_setup, calendar, scenarios, welcome_call
+        // We map these to our mobile steps: welcome, profile, tutorial, first_call
+        
+        let webSteps = webResponse["steps"] as? [String: [String: Any]] ?? [:]
+        var completedSteps: [OnboardingStep] = []
+        
+        // Check web steps and map to mobile
+        if let phoneSetup = webSteps["phoneSetup"], 
+           phoneSetup["completed"] as? Bool == true {
+            completedSteps.append(.welcome)
+            completedSteps.append(.profile) // Profile includes basic setup
+        }
+        
+        if let scenarios = webSteps["scenarios"],
+           scenarios["completed"] as? Bool == true {
+            completedSteps.append(.tutorial)
+        }
+        
+        if let welcomeCall = webSteps["welcomeCall"],
+           welcomeCall["completed"] as? Bool == true {
+            completedSteps.append(.firstCall)
+        }
+        
+        let isComplete = completedSteps.count == OnboardingStep.allCases.count
+        let currentStep = completedSteps.isEmpty ? .welcome : 
+                         (completedSteps.count < OnboardingStep.allCases.count ? 
+                          OnboardingStep.allCases[completedSteps.count] : .firstCall)
+        let progressPercentage = Double(completedSteps.count) / Double(OnboardingStep.allCases.count) * 100
+        
+        return OnboardingStatus(
+            isComplete: isComplete,
+            currentStep: currentStep,
+            completedSteps: completedSteps,
+            progressPercentage: progressPercentage
+        )
+    }
+    
+
+
+    func getAvailableScenarios() async throws -> [Scenario] {
+        let url = URL(string: "\(baseURL)/mobile/scenarios")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        
+        let headers = getAuthHeaders()
+        headers.forEach { key, value in
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        
+        return try await performRequest(request) { data in
+            let response = try JSONDecoder().decode(ScenariosResponse.self, from: data)
+            return response.scenarios
+        }
+    }
 }
 
 // MARK: - Enhanced Backend Errors
@@ -355,4 +518,6 @@ enum BackendError: Error, LocalizedError {
             return "Unknown error: \(message)"
         }
     }
+    
+
 }

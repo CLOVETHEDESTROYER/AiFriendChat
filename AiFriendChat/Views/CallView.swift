@@ -28,22 +28,28 @@ struct CallView: View {
     }
     
     // Enhanced scenario collection with all available premade scenarios
+    // Updated to match actual backend scenarios from MCP testing
     var allPremadeScenarios: [String] {
         return [
-            // Entertainment
-            "default", "celebrity", "comedian", "storyteller", "yacht_party", "instigator",
-            // Professional
-            "sales_pitch", "customer_service", "real_estate",
-            // Emergency
-            "sister_emergency", "mother_emergency",
-            // Romantic
-            "caring_partner", "surprise_date_planner", "long_distance_love",
-            // Family & Friends
-            "supportive_bestie", "encouraging_parent", "caring_sibling",
-            // Motivational
-            "therapist", "motivational_coach", "wellness_checkin",
-            // Celebration
-            "celebration_caller", "birthday_wishes", "gratitude_caller"
+            // Emergency Exit scenarios
+            "fake_doctor",           // Emergency exit with medical urgency
+            "fake_tech_support",     // Security breach emergency  
+            "fake_car_accident",     // Minor accident drama
+            
+            // Work Exit scenarios
+            "fake_boss",             // Work emergency for quick escape
+            
+            // Social Exit scenarios  
+            "fake_restaurant_manager", // Special reservation confirmation
+            
+            // Fun Interaction scenarios
+            "fake_celebrity",         // Chat with a famous person
+            "fake_lottery_winner",    // You've won big!
+            
+            // Social Interaction scenarios
+            "fake_dating_app_match",  // Meet your new match
+            "fake_old_friend",        // Reconnect with someone from the past
+            "fake_news_reporter"      // Interview opportunity
         ]
     }
     
@@ -270,8 +276,14 @@ struct CallView: View {
                 #if DEBUG
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu("Debug") {
-                        Button("Toggle Premium") {
-                            purchaseManager.toggleDebugPremium()
+                        if purchaseManager.isSubscribed {
+                            Button("🔴 DISABLE Debug Premium") {
+                                purchaseManager.toggleDebugPremium()
+                            }
+                        } else {
+                            Button("🟡 ENABLE Debug Premium") {
+                                purchaseManager.toggleDebugPremium()
+                            }
                         }
                         
                         Button("Reset Call Count") {
@@ -285,7 +297,16 @@ struct CallView: View {
                             purchaseManager.objectWillChange.send()
                         }
                         
+                        Divider()
+                        
+                        Text("Status:")
+                            .font(.caption.bold())
+                        Text("Debug Premium: \(purchaseManager.isSubscribed ? "🟢 ON" : "🔴 OFF")")
+                            .font(.caption)
                         Text("Calls Made: \(purchaseManager.callsMade)")
+                            .font(.caption)
+                        Text("Endpoint: /mobile/make-call")
+                            .font(.caption)
                     }
                 }
                 #endif
@@ -312,6 +333,22 @@ struct CallView: View {
                     showAlert = true
                 }
             }
+            .onChange(of: callViewModel.authenticationRequired) { _, authRequired in
+                if authRequired {
+                    // Clear the flag and show auth prompt
+                    callViewModel.authenticationRequired = false
+                    authViewModel.isLoggedIn = false
+                    showAuthPrompt = true
+                }
+            }
+            .onChange(of: callViewModel.showPremiumPrompt) { _, showPrompt in
+                if showPrompt {
+                    // Reset the flag and show upgrade prompt
+                    callViewModel.showPremiumPrompt = false
+                    callViewModel.upgradeMessage = callViewModel.premiumPromptMessage
+                    callViewModel.showUpgradePrompt = true
+                }
+            }
             .sheet(isPresented: $showAuthPrompt) {
                 AuthPromptView(showAuthView: $showAuthView)
             }
@@ -329,6 +366,7 @@ struct CallView: View {
             return
         }
         
+        // Check authentication before making call
         if !authViewModel.isLoggedIn {
             showAuthPrompt = true
             return

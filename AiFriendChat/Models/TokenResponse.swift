@@ -9,7 +9,7 @@
 // Models/TokenResponse.swift
 struct TokenResponse: Codable {
     let accessToken: String
-    let refreshToken: String
+    let refreshToken: String?  // Make optional since backend might not return it
     let tokenType: String
     
     enum CodingKeys: String, CodingKey {

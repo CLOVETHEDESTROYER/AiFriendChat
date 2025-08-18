@@ -43,6 +43,8 @@ struct EULAView: View {
     }
 }
 
-#Preview {
-    EULAView()
+struct EULAView_Previews: PreviewProvider {
+    static var previews: some View {
+        EULAView()
+    }
 } 

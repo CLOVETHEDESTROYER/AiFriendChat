@@ -28,8 +28,13 @@ class AuthViewModel: ObservableObject {
                 case .success(let tokenResponse):
                     self.isLoggedIn = true
                     KeychainManager.shared.saveToken(tokenResponse.accessToken, forKey: "accessToken")
-                    KeychainManager.shared.saveToken(tokenResponse.refreshToken, forKey: "refreshToken")
-                    self.errorMessage = nil
+                    
+                    // Only save refresh token if it exists
+                    if let refreshToken = tokenResponse.refreshToken {
+                        KeychainManager.shared.saveToken(refreshToken, forKey: "refreshToken")
+                    }
+                    
+                    self.errorMessage = nil  // Clear any previous errors
                     print("Login successful. Access token: \(tokenResponse.accessToken)")
                 case .failure(let error):
                     self.isLoggedIn = false
@@ -48,10 +53,25 @@ class AuthViewModel: ObservableObject {
                     self.isLoggedIn = true
                     // Save access token securely
                     KeychainManager.shared.saveToken(tokenResponse.accessToken, forKey: "accessToken")
-                    KeychainManager.shared.saveToken(tokenResponse.refreshToken, forKey: "refreshToken")
+                    
+                    // Only save refresh token if it exists
+                    if let refreshToken = tokenResponse.refreshToken {
+                        KeychainManager.shared.saveToken(refreshToken, forKey: "refreshToken")
+                    }
+                    
                     print("Registration successful. Access token: \(tokenResponse.accessToken)")
                 case .failure(let error):
                     let desc = error.localizedDescription.lowercased()
+                    
+                    // SPECIAL CASE: If registration failed with 400, try auto-login
+                    // This handles backends that return 400 but still create the user
+                    if desc.contains("400") || desc.contains("bad request") {
+                        print("⚠️ Registration failed with 400, trying auto-login...")
+                        self.login(email: email, password: password)
+                        return
+                    }
+                    
+                    // Handle other errors
                     if desc.contains("unexpected") || desc.contains("500") {
                         self.errorMessage = "Registration may have failed due to a server issue. If this email is new, try logging in instead - you might already be registered."
                     } else if desc.contains("already exists") || desc.contains("duplicate") {

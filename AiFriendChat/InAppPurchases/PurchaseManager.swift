@@ -266,8 +266,10 @@ class PurchaseManager: ObservableObject {
         isSubscribed.toggle()
         if isSubscribed {
             subscriptionType = .monthly
+            print("🟡 Debug Premium: ENABLED - Will use testing endpoint")
         } else {
             subscriptionType = .none
+            print("🟡 Debug Premium: DISABLED - Will use production endpoint")
         }
         objectWillChange.send()
     }

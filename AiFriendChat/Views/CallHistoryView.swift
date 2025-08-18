@@ -170,6 +170,8 @@ private struct StatusBadge: View {
     }
 }
 
-#Preview {
-    CallHistoryView()
+struct CallHistoryView_Previews: PreviewProvider {
+    static var previews: some View {
+        CallHistoryView()
+    }
 } 

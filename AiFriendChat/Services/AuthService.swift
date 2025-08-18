@@ -101,7 +101,7 @@ struct AuthService {
         
         session.dataTask(with: request) { data, response, error in
             if let error = error {
-                print("Network error: \(error)")
+                print("🔴 Network error during registration: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }
@@ -109,45 +109,114 @@ struct AuthService {
             }
             
             if let httpResponse = response as? HTTPURLResponse {
-                print("Registration response status code: \(httpResponse.statusCode)")
+                print("✅ Registration HTTP status: \(httpResponse.statusCode)")
+                
+                // Check if status is actually successful
+                if httpResponse.statusCode != 200 {
+                    print("🔴 Registration failed with status: \(httpResponse.statusCode)")
+                    DispatchQueue.main.async {
+                        completion(.failure(NSError(domain: "", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Registration failed with status \(httpResponse.statusCode)"])))
+                    }
+                    return
+                }
             }
             
             guard let data = data else {
-                print("No data received")
+                print("🔴 No data received from registration")
                 DispatchQueue.main.async {
                     completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
                 }
                 return
             }
             
-            // Print the raw response for debugging
+            // Print the exact response for debugging
             if let responseString = String(data: data, encoding: .utf8) {
-                print("Raw server response: \(responseString)")
+                print("📋 Raw registration response: \(responseString)")
             }
             
             do {
-                // First try to decode as TokenResponse
+                // Try multiple response formats the backend might return
+                
+                // Format 1: Standard TokenResponse
                 if let tokenResponse = try? JSONDecoder().decode(TokenResponse.self, from: data) {
+                    print("✅ Successfully decoded as TokenResponse")
                     DispatchQueue.main.async {
                         completion(.success(tokenResponse))
                     }
                     return
                 }
                 
-                // If that fails, try to decode as an error message
-                if let errorResponse = try? JSONDecoder().decode([String: String].self, from: data) {
+                // Format 2: Different field names (common backend variations)
+                struct AlternativeTokenResponse: Codable {
+                    let accessToken: String
+                    let refreshToken: String
+                    let tokenType: String
+                    
+                    enum CodingKeys: String, CodingKey {
+                        case accessToken = "accessToken"  // Try without underscore
+                        case refreshToken = "refreshToken"
+                        case tokenType = "tokenType"
+                    }
+                }
+                
+                if let altTokenResponse = try? JSONDecoder().decode(AlternativeTokenResponse.self, from: data) {
+                    print("✅ Successfully decoded as AlternativeTokenResponse")
+                    let tokenResponse = TokenResponse(
+                        accessToken: altTokenResponse.accessToken,
+                        refreshToken: altTokenResponse.refreshToken,
+                        tokenType: altTokenResponse.tokenType
+                    )
                     DispatchQueue.main.async {
-                        let errorMessage = errorResponse["detail"] ?? errorResponse["message"] ?? "Unknown error"
-                        completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMessage])))
+                        completion(.success(tokenResponse))
                     }
                     return
                 }
                 
-                // If both fail, throw a generic error
+                // Format 3: Try to extract tokens from any JSON structure
+                if let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("📋 Parsed JSON keys: \(Array(jsonObject.keys))")
+                    
+                    // Look for access token in various possible field names
+                    let possibleAccessTokenKeys = ["access_token", "accessToken", "token", "jwt"]
+                    let possibleRefreshTokenKeys = ["refresh_token", "refreshToken", "refresh"]
+                    
+                    var accessToken: String?
+                    var refreshToken: String? = nil  // Make optional
+                    
+                    for key in possibleAccessTokenKeys {
+                        if let token = jsonObject[key] as? String {
+                            accessToken = token
+                            break
+                        }
+                    }
+                    
+                    for key in possibleRefreshTokenKeys {
+                        if let token = jsonObject[key] as? String {
+                            refreshToken = token
+                            break
+                        }
+                    }
+                    
+                    if let accessToken = accessToken {
+                        print("✅ Successfully extracted tokens manually")
+                        let tokenResponse = TokenResponse(
+                            accessToken: accessToken,
+                            refreshToken: refreshToken,  // Can be nil
+                            tokenType: jsonObject["token_type"] as? String ?? "bearer"
+                        )
+                        DispatchQueue.main.async {
+                            completion(.success(tokenResponse))
+                        }
+                        return
+                    }
+                }
+                
+                // If all parsing attempts fail
+                print("🔴 Failed to parse registration response in any expected format")
                 throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server response format"])
                 
             } catch {
-                print("Registration decoding error: \(error)")
+                print("🔴 Registration response parsing error: \(error)")
                 DispatchQueue.main.async {
                     completion(.failure(error))
                 }

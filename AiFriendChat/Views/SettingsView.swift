@@ -50,9 +50,18 @@ struct SettingsView: View {
                     Text("Calls Made: \(purchaseManager.callsMade)")
                     Text("Is Subscribed: \(purchaseManager.isSubscribed)")
                     Text("Has Token: \(KeychainManager.shared.getToken(forKey: "accessToken") != nil)")
+                    Text("Onboarding Complete: \(UserDefaults.standard.bool(forKey: "hasCompletedOnboarding"))")
                     
                     Button("Test Backend Connection") {
                         testBackendConnection()
+                    }
+                    
+                    Button("Reset Onboarding", role: .destructive) {
+                        resetOnboarding()
+                    }
+                    
+                    Button("Test Onboarding API") {
+                        testOnboardingAPI()
                     }
                 }
                 #endif
@@ -109,6 +118,31 @@ struct SettingsView: View {
             }
         }
     }
+    
+    private func resetOnboarding() {
+        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+        UserDefaults.standard.synchronize()
+        print("🔄 Onboarding reset - user will see onboarding on next app restart")
+    }
+    
+    private func testOnboardingAPI() {
+        Task {
+            do {
+                let status = try await BackendService.shared.getOnboardingStatus()
+                print("✅ Onboarding API successful: \(status)")
+            } catch {
+                print("❌ Onboarding API failed: \(error)")
+                
+                // Test initialization
+                do {
+                    let initStatus = try await BackendService.shared.initializeOnboarding()
+                    print("✅ Onboarding initialization successful: \(initStatus)")
+                } catch {
+                    print("❌ Onboarding initialization failed: \(error)")
+                }
+            }
+        }
+    }
 }
 
 struct CallPreferencesView: View {
@@ -117,7 +151,7 @@ struct CallPreferencesView: View {
     @AppStorage("autoConfirmCalls") private var autoConfirmCalls = false
     @AppStorage("callTimeout") private var callTimeout = 5
     
-    let scenarios = ["default", "sister_emergency", "mother_emergency", "yacht_party", "instigator", "gameshow_host"]
+    let scenarios = ["fake_doctor", "fake_celebrity", "fake_boss", "fake_tech_support", "fake_lottery_winner", "fake_old_friend"]
     let timeoutOptions = [1, 2, 5, 10, 15]
     
     var body: some View {
@@ -185,6 +219,8 @@ struct NotificationSettingsView: View {
     }
 }
 
-#Preview {
-    SettingsView()
+struct SettingsView_Previews: PreviewProvider {
+    static var previews: some View {
+        SettingsView()
+    }
 } 

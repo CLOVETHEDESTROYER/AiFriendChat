@@ -31,8 +31,10 @@ struct ZigZagView: View {
     }
 }
 
-#Preview {
-    ZigZagView()
-        .padding()
-        .background(Color.black)
+struct ZigZagView_Previews: PreviewProvider {
+    static var previews: some View {
+        ZigZagView()
+            .padding()
+            .background(Color.black)
+    }
 } 

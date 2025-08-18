@@ -233,6 +233,8 @@ struct ScenarioCard: View {
     }
 }
 
-#Preview {
-    EnhancedScenarioSelectionView(selectedScenario: .constant("default"))
+struct EnhancedScenarioSelectionView_Previews: PreviewProvider {
+    static var previews: some View {
+        EnhancedScenarioSelectionView(selectedScenario: .constant("default"))
+    }
 }

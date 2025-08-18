@@ -514,7 +514,9 @@ struct CallDurationCard: View {
     }
 }
 
-#Preview {
-    HomeView(modelContext: try! ModelContainer(for: CallHistory.self).mainContext)
-        .environmentObject(AuthViewModel())
+struct HomeView_Previews: PreviewProvider {
+    static var previews: some View {
+        HomeView(modelContext: try! ModelContainer(for: CallHistory.self).mainContext)
+            .environmentObject(AuthViewModel())
+    }
 }

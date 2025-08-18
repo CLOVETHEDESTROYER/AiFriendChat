@@ -229,38 +229,11 @@ struct TermsOfServiceView: View {
     }
 }
 
-struct EULAView: View {
-    @Environment(\.dismiss) var dismiss
-    
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("End User License Agreement")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                        .padding(.bottom)
-                    
-                    Text("""
-                    This End User License Agreement (EULA) is a legal agreement between you and Hyperlabs AI for the use of AI Friend Chat.
-                    
-                    By using this software, you agree to be bound by the terms of this EULA.
-                    
-                    For complete EULA, please contact support.
-                    """)
-                    
-                    Spacer()
-                }
-                .padding()
-            }
-            .navigationTitle("EULA")
-            .navigationBarItems(trailing: Button("Done") { dismiss() })
-        }
-        .navigationViewStyle(StackNavigationViewStyle())
-    }
-}
 
-#Preview {
-    AccountView()
-        .environmentObject(AuthViewModel())
+
+struct AccountView_Previews: PreviewProvider {
+    static var previews: some View {
+        AccountView()
+            .environmentObject(AuthViewModel())
+    }
 } 

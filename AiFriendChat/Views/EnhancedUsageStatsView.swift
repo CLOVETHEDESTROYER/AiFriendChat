@@ -522,26 +522,28 @@ struct AddonPlanCard: View {
     }
 }
 
-#Preview {
-    let mockStats = UsageStats(
-        app_type: "mobile_consumer",
-        is_trial_active: true,
-        trial_calls_remaining: 2,
-        trial_calls_used: 1,
-        calls_made_today: 1,
-        calls_made_this_week: 3,
-        calls_made_this_month: 8,
-        calls_made_total: 15,
-        is_subscribed: false,
-        subscription_tier: nil,
-        upgrade_recommended: true,
-        total_call_duration_this_week: 180,
-        total_call_duration_this_month: 450,
-        addon_calls_remaining: 0,
-        addon_calls_expiry: nil,
-        week_start_date: "2024-01-15T10:30:00Z",
-        month_start_date: "2024-01-15T10:30:00Z"
-    )
-    
-    return EnhancedUsageStatsView(stats: mockStats)
+struct EnhancedUsageStatsView_Previews: PreviewProvider {
+    static var previews: some View {
+        let mockStats = UsageStats(
+            app_type: "mobile_consumer",
+            is_trial_active: true,
+            trial_calls_remaining: 2,
+            trial_calls_used: 1,
+            calls_made_today: 1,
+            calls_made_this_week: 3,
+            calls_made_this_month: 8,
+            calls_made_total: 15,
+            is_subscribed: false,
+            subscription_tier: nil,
+            upgrade_recommended: true,
+            total_call_duration_this_week: 180,
+            total_call_duration_this_month: 450,
+            addon_calls_remaining: 0,
+            addon_calls_expiry: nil,
+            week_start_date: "2024-01-15T10:30:00Z",
+            month_start_date: "2024-01-15T10:30:00Z"
+        )
+        
+        return EnhancedUsageStatsView(stats: mockStats)
+    }
 }

@@ -253,7 +253,8 @@ struct EnhancedVoiceOptionCard: View {
     }
 }
 
-#Preview {
-    @State var selectedVoice: VoiceType = .alloy
-    return EnhancedVoiceSelectionView(selectedVoice: $selectedVoice)
+struct EnhancedVoiceSelectionView_Previews: PreviewProvider {
+    static var previews: some View {
+        EnhancedVoiceSelectionView(selectedVoice: .constant(.alloy))
+    }
 }

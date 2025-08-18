@@ -2,13 +2,12 @@ import SwiftUI
 
 struct RealtimeCallView: View {
     @Environment(\.modelContext) private var modelContext
-    @StateObject private var callViewModel: CallViewModel
+    @State private var callViewModel: CallViewModel?
     @Environment(\.dismiss) private var dismiss
     let scenario: String
     
     init(scenario: String) {
         self.scenario = scenario
-        _callViewModel = StateObject(wrappedValue: CallViewModel(modelContext: modelContext))
     }
     
     var body: some View {
@@ -22,9 +21,15 @@ struct RealtimeCallView: View {
             .edgesIgnoringSafeArea(.all)
             
             VStack {
-                Text("Call Status: \(callViewModel.isCallInProgress ? "Connecting..." : "Disconnected")")
-                    .foregroundColor(.white)
-                    .padding()
+                if let callViewModel = callViewModel {
+                    Text("Call Status: \(callViewModel.isCallInProgress ? "Connecting..." : "Disconnected")")
+                        .foregroundColor(.white)
+                        .padding()
+                } else {
+                    Text("Initializing...")
+                        .foregroundColor(.white)
+                        .padding()
+                }
                 
                 Button(action: { dismiss() }) {
                     Text("End Call")
@@ -34,6 +39,11 @@ struct RealtimeCallView: View {
                         .cornerRadius(10)
                 }
                 .padding()
+            }
+        }
+        .onAppear {
+            if callViewModel == nil {
+                callViewModel = CallViewModel(modelContext: modelContext)
             }
         }
     }
