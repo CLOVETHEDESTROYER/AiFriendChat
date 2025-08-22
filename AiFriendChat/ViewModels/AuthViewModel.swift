@@ -138,4 +138,70 @@ class AuthViewModel: ObservableObject {
             }
         }
     }
+    
+    // MARK: - Apple Sign-In
+    
+    func appleSignIn(identityToken: String, authorizationCode: String) {
+        authService.appleSignIn(identityToken: identityToken, authorizationCode: authorizationCode) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let tokenResponse):
+                    self.isLoggedIn = true
+                    KeychainManager.shared.saveToken(tokenResponse.accessToken, forKey: "accessToken")
+                    
+                    if let refreshToken = tokenResponse.refreshToken {
+                        KeychainManager.shared.saveToken(refreshToken, forKey: "refreshToken")
+                    }
+                    
+                    self.errorMessage = nil
+                    print("Apple Sign-In successful. Access token: \(tokenResponse.accessToken)")
+                case .failure(let error):
+                    self.isLoggedIn = false
+                    self.errorMessage = "Apple Sign-In failed: \(error.localizedDescription)"
+                    print("Apple Sign-In failed. Error: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    // MARK: - Enhanced Onboarding Registration
+    
+    func registerWithOnboarding(email: String, password: String, name: String, phoneNumber: String?) {
+        let onboardingData: [String: Any] = [
+            "name": name,
+            "phone_number": phoneNumber ?? "",
+            "preferences": [
+                "voice_preference": "alloy",
+                "notifications_enabled": true
+            ]
+        ]
+        
+        authService.registerWithOnboarding(email: email, password: password, onboardingData: onboardingData) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let tokenResponse):
+                    self.isLoggedIn = true
+                    KeychainManager.shared.saveToken(tokenResponse.accessToken, forKey: "accessToken")
+                    
+                    if let refreshToken = tokenResponse.refreshToken {
+                        KeychainManager.shared.saveToken(refreshToken, forKey: "refreshToken")
+                    }
+                    
+                    // Save onboarding data locally
+                    UserDefaults.standard.set(name, forKey: "userName")
+                    if let phoneNumber = phoneNumber {
+                        UserDefaults.standard.set(phoneNumber, forKey: "userPhone")
+                    }
+                    UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+                    
+                    self.errorMessage = nil
+                    print("Registration with onboarding successful. Access token: \(tokenResponse.accessToken)")
+                case .failure(let error):
+                    self.isLoggedIn = false
+                    self.errorMessage = "Registration with onboarding failed: \(error.localizedDescription)"
+                    print("Registration with onboarding failed. Error: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
 }

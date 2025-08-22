@@ -75,28 +75,23 @@ class OnboardingViewModel: ObservableObject {
         do {
             switch status.currentStep {
             case .welcome:
-                _ = try await backendService.completeOnboardingStep(.welcome)
+                // Map to backend step name
+                _ = try await backendService.completeOnboardingStep(.phone_setup)
                 
             case .profile:
-                let profile = OnboardingProfile(
-                    name: userName,
-                    phoneNumber: userPhone.isEmpty ? nil : userPhone,
-                    preferredVoice: selectedVoice,
-                    notificationsEnabled: notificationsEnabled
-                )
-                try await backendService.saveOnboardingProfile(profile)
-                
-                // Also save locally for immediate use
-                UserDefaults.standard.set(userName, forKey: "userName")
+                // Map to backend step name
+                _ = try await backendService.completeOnboardingStep(.calendar)
                 
             case .tutorial:
-                _ = try await backendService.completeOnboardingStep(.tutorial)
+                // Map to backend step name
+                _ = try await backendService.completeOnboardingStep(.scenarios)
                 
             case .firstCall:
-                _ = try await backendService.completeOnboardingStep(.firstCall)
+                // Map to backend step name
+                _ = try await backendService.completeOnboardingStep(.welcome_call)
             }
             
-            // Refresh onboarding status
+            // Refresh onboarding status from backend
             onboardingStatus = try await backendService.getOnboardingStatus()
             updateCurrentStepIndex()
             
@@ -174,27 +169,32 @@ class OnboardingViewModel: ObservableObject {
     private func updateLocalOnboardingStatus() {
         guard var status = onboardingStatus else { return }
         
-        var completedSteps = status.completedSteps
-        if !completedSteps.contains(status.currentStep) {
-            completedSteps.append(status.currentStep)
+        // Add current step to completed steps if not already there
+        if !status.completedSteps.contains(status.currentStep) {
+            status.completedSteps.append(status.currentStep)
         }
         
-        let nextStep = status.currentStep
+        // Check if all steps are completed
         let allSteps = OnboardingStep.allCases
-        let nextStepIndex = allSteps.firstIndex(of: nextStep).map { $0 + 1 } ?? 0
-        let newCurrentStep = nextStepIndex < allSteps.count ? allSteps[nextStepIndex] : .firstCall
+        let isComplete = status.completedSteps.count == allSteps.count
+        let progressPercentage = Double(status.completedSteps.count) / Double(allSteps.count) * 100
         
-        let isComplete = completedSteps.count == OnboardingStep.allCases.count
-        let progressPercentage = Double(completedSteps.count) / Double(OnboardingStep.allCases.count) * 100
+        // Determine next step
+        let nextStep: OnboardingStep
+        if isComplete {
+            nextStep = .firstCall // All steps completed
+        } else {
+            let currentIndex = allSteps.firstIndex(of: status.currentStep) ?? 0
+            let nextIndex = min(currentIndex + 1, allSteps.count - 1)
+            nextStep = allSteps[nextIndex]
+        }
         
         onboardingStatus = OnboardingStatus(
+            currentStep: nextStep,
+            completedSteps: status.completedSteps,
             isComplete: isComplete,
-            currentStep: newCurrentStep,
-            completedSteps: completedSteps,
             progressPercentage: progressPercentage
         )
-        
-        updateCurrentStepIndex()
         
         // Save completion status locally if onboarding is complete
         if isComplete {

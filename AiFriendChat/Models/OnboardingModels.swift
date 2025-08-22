@@ -11,10 +11,10 @@ import Foundation
 // These models are designed for the consumer mobile app with simplified onboarding
 
 enum OnboardingStep: String, CaseIterable, Codable {
-    case welcome = "welcome"
-    case profile = "profile" 
-    case tutorial = "tutorial"
-    case firstCall = "first_call"
+    case welcome = "phone_setup"      // Maps to backend phone_setup
+    case profile = "calendar"         // Maps to backend calendar  
+    case tutorial = "scenarios"       // Maps to backend scenarios
+    case firstCall = "welcome_call"   // Maps to backend welcome_call
     
     var title: String {
         switch self {

@@ -391,6 +391,70 @@ class BackendService: ObservableObject {
         _ = try await completeOnboardingStep(.profile, data: profileData)
     }
     
+    // MARK: - Enhanced Onboarding Methods
+    
+    /// Start anonymous onboarding (no registration required)
+    func startAnonymousOnboarding() async throws -> String {
+        let request = try createUnauthenticatedRequest(
+            endpoint: "/onboarding/start",
+            method: "POST"
+        )
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try handleHTTPResponse(response)
+        
+        let responseDict = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        return responseDict["session_id"] as? String ?? ""
+    }
+    
+    /// Set user name during anonymous onboarding
+    func setOnboardingName(sessionId: String, name: String) async throws {
+        let request = try createUnauthenticatedRequest(
+            endpoint: "/onboarding/set-name?session_id=\(sessionId)",
+            method: "POST",
+            body: ["user_name": name]
+        )
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try handleHTTPResponse(response)
+    }
+    
+    /// Select scenario during anonymous onboarding
+    func selectOnboardingScenario(sessionId: String, scenario: String) async throws {
+        let request = try createUnauthenticatedRequest(
+            endpoint: "/onboarding/select-scenario?session_id=\(sessionId)",
+            method: "POST",
+            body: ["scenario_id": scenario]
+        )
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try handleHTTPResponse(response)
+    }
+    
+    /// Complete anonymous onboarding
+    func completeAnonymousOnboarding(sessionId: String) async throws {
+        let request = try createUnauthenticatedRequest(
+            endpoint: "/onboarding/complete?session_id=\(sessionId)",
+            method: "POST"
+        )
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try handleHTTPResponse(response)
+    }
+    
+    /// Get onboarding session status
+    func getOnboardingSession(sessionId: String) async throws -> [String: Any] {
+        let request = try createUnauthenticatedRequest(
+            endpoint: "/onboarding/session/\(sessionId)",
+            method: "GET"
+        )
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try handleHTTPResponse(response)
+        
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+    
     // MARK: - Private Helper Methods for Onboarding
     
     private func createAuthenticatedRequest(endpoint: String, method: String, body: [String: Any]? = nil) throws -> URLRequest {
@@ -402,6 +466,19 @@ class BackendService: ObservableObject {
         headers.forEach { key, value in
             request.setValue(value, forHTTPHeaderField: key)
         }
+        
+        if let body = body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        }
+        
+        return request
+    }
+    
+    private func createUnauthenticatedRequest(endpoint: String, method: String, body: [String: Any]? = nil) throws -> URLRequest {
+        let url = URL(string: "\(baseURL)\(endpoint)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = method
         
         if let body = body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

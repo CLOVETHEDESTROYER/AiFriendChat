@@ -320,4 +320,153 @@ struct AuthService {
             }
         }.resume()
     }
+    
+    // MARK: - Apple Sign-In
+    
+    func appleSignIn(identityToken: String, authorizationCode: String, completion: @escaping (Result<TokenResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/auth/apple-signin") else {
+            print("Failed to create URL for Apple Sign-In")
+            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("mobile", forHTTPHeaderField: "X-App-Type")
+        request.setValue("Speech-Assistant-Mobile-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 30
+        
+        let requestBody = [
+            "identity_token": identityToken,
+            "authorization_code": authorizationCode
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            print("Failed to encode Apple Sign-In request: \(error)")
+            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to encode request data"])))
+            return
+        }
+        
+        let session = URLSession(configuration: .default)
+        
+        session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Apple Sign-In network error: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("Apple Sign-In HTTP status: \(httpResponse.statusCode)")
+                
+                if httpResponse.statusCode != 200 {
+                    print("Apple Sign-In failed with status: \(httpResponse.statusCode)")
+                    DispatchQueue.main.async {
+                        completion(.failure(NSError(domain: "", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Apple Sign-In failed with status \(httpResponse.statusCode)"])))
+                    }
+                    return
+                }
+            }
+            
+            guard let data = data else {
+                print("No data received from Apple Sign-In")
+                DispatchQueue.main.async {
+                    completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                }
+                return
+            }
+            
+            do {
+                let tokenResponse = try JSONDecoder().decode(TokenResponse.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(tokenResponse))
+                }
+            } catch {
+                print("Apple Sign-In response parsing error: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
+    
+    // MARK: - Enhanced Onboarding Registration
+    
+    func registerWithOnboarding(email: String, password: String, onboardingData: [String: Any], completion: @escaping (Result<TokenResponse, Error>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/auth/register-with-onboarding") else {
+            print("Failed to create URL for registration with onboarding")
+            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])))
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("mobile", forHTTPHeaderField: "X-App-Type")
+        request.setValue("Speech-Assistant-Mobile-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 30
+        
+        let requestBody: [String: Any] = [
+            "email": email,
+            "password": password,
+            "onboarding_data": onboardingData
+        ]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            print("Failed to encode registration with onboarding request: \(error)")
+            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to encode request data"])))
+            return
+        }
+        
+        let session = URLSession(configuration: .default)
+        
+        session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Registration with onboarding network error: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("Registration with onboarding HTTP status: \(httpResponse.statusCode)")
+                
+                if httpResponse.statusCode != 200 {
+                    print("Registration with onboarding failed with status: \(httpResponse.statusCode)")
+                    DispatchQueue.main.async {
+                        completion(.failure(NSError(domain: "", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Registration with onboarding failed with status \(httpResponse.statusCode)"])))
+                    }
+                    return
+                }
+            }
+            
+            guard let data = data else {
+                print("No data received from registration with onboarding")
+                DispatchQueue.main.async {
+                    completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
+                }
+                return
+            }
+            
+            do {
+                let tokenResponse = try JSONDecoder().decode(TokenResponse.self, from: data)
+                DispatchQueue.main.async {
+                    completion(.success(tokenResponse))
+                }
+            } catch {
+                print("Registration with onboarding response parsing error: \(error)")
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }.resume()
+    }
 }
