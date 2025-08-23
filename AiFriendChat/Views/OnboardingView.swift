@@ -363,7 +363,6 @@ struct TutorialStepView: View {
                 Button(action: {
                     Task {
                         await viewModel.completeCurrentStep()
-                        viewModel.goToNextStep()
                     }
                 }) {
                     HStack {

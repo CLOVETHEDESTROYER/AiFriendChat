@@ -69,46 +69,65 @@ class OnboardingViewModel: ObservableObject {
     func completeCurrentStep() async {
         guard let status = onboardingStatus else { return }
         
+        print("🔄 Starting step completion for: \(status.currentStep)")
+        
+        // Prevent infinite loops - check if step was already completed
+        if status.completedSteps.contains(status.currentStep) {
+            print("⚠️ Step \(status.currentStep) already completed, moving to next step")
+            moveToNextStep()
+            return
+        }
+        
         isLoading = true
         errorMessage = nil
         
         do {
             switch status.currentStep {
             case .welcome:
-                // Map to backend step name
-                _ = try await backendService.completeOnboardingStep(.phone_setup)
+                print("✅ Completing welcome step")
+                _ = try await backendService.completeOnboardingStep(.welcome)
                 
             case .profile:
-                // Map to backend step name
-                _ = try await backendService.completeOnboardingStep(.calendar)
+                print("✅ Completing profile step")
+                _ = try await backendService.completeOnboardingStep(.profile)
                 
             case .tutorial:
-                // Map to backend step name
-                _ = try await backendService.completeOnboardingStep(.scenarios)
+                print("✅ Completing tutorial step")
+                _ = try await backendService.completeOnboardingStep(.tutorial)
                 
             case .firstCall:
-                // Map to backend step name
-                _ = try await backendService.completeOnboardingStep(.welcome_call)
+                print("✅ Completing firstCall step")
+                _ = try await backendService.completeOnboardingStep(.firstCall)
             }
             
-            // Refresh onboarding status from backend
+            print("🔄 Refreshing onboarding status from backend")
             onboardingStatus = try await backendService.getOnboardingStatus()
-            updateCurrentStepIndex()
+            print("📊 New status: \(String(describing: onboardingStatus))")
+            
+            // Check if backend properly updated the step
+            if let newStatus = onboardingStatus, newStatus.currentStep == status.currentStep {
+                print("⚠️ Backend didn't progress step, forcing local progression")
+                forceStepProgression()
+            } else {
+                updateCurrentStepIndex()
+            }
             
             // Save completion status locally if onboarding is complete
             if onboardingStatus?.isComplete == true {
                 UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+                print("🎉 Onboarding completed!")
             }
             
         } catch {
             errorMessage = "Failed to complete step: \(error.localizedDescription)"
-            print("Step completion error: \(error)")
+            print("❌ Step completion error: \(error)")
             
             // For offline/testing, update local status
             updateLocalOnboardingStatus()
         }
         
         isLoading = false
+        print("🏁 Step completion finished")
     }
     
     func skipCurrentStep() async {
@@ -152,7 +171,10 @@ class OnboardingViewModel: ObservableObject {
     private func updateCurrentStepIndex() {
         if let status = onboardingStatus,
            let index = allSteps.firstIndex(of: status.currentStep) {
+            print("🔄 Updating current step index: \(currentStepIndex) -> \(index)")
             currentStepIndex = index
+        } else {
+            print("⚠️ Could not update step index - status: \(String(describing: onboardingStatus))")
         }
     }
     
@@ -169,9 +191,12 @@ class OnboardingViewModel: ObservableObject {
     private func updateLocalOnboardingStatus() {
         guard var status = onboardingStatus else { return }
         
+        print("🔄 Updating local onboarding status for step: \(status.currentStep)")
+        
         // Add current step to completed steps if not already there
         if !status.completedSteps.contains(status.currentStep) {
             status.completedSteps.append(status.currentStep)
+            print("✅ Added step to completed: \(status.currentStep)")
         }
         
         // Check if all steps are completed
@@ -179,26 +204,93 @@ class OnboardingViewModel: ObservableObject {
         let isComplete = status.completedSteps.count == allSteps.count
         let progressPercentage = Double(status.completedSteps.count) / Double(allSteps.count) * 100
         
+        print("📊 Progress: \(status.completedSteps.count)/\(allSteps.count) steps completed (\(Int(progressPercentage))%)")
+        
         // Determine next step
         let nextStep: OnboardingStep
         if isComplete {
             nextStep = .firstCall // All steps completed
+            print("🎉 All steps completed, next step: \(nextStep)")
         } else {
             let currentIndex = allSteps.firstIndex(of: status.currentStep) ?? 0
             let nextIndex = min(currentIndex + 1, allSteps.count - 1)
             nextStep = allSteps[nextIndex]
+            print("🔄 Moving to next step: \(status.currentStep) -> \(nextStep)")
         }
         
         onboardingStatus = OnboardingStatus(
+            isComplete: isComplete,
             currentStep: nextStep,
             completedSteps: status.completedSteps,
-            isComplete: isComplete,
             progressPercentage: progressPercentage
         )
         
         // Save completion status locally if onboarding is complete
         if isComplete {
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            print("💾 Saved onboarding completion to UserDefaults")
+        }
+    }
+    
+    // MARK: - Step Progression Helpers
+    
+    private func moveToNextStep() {
+        guard let status = onboardingStatus else { return }
+        
+        let allSteps = OnboardingStep.allCases
+        guard let currentIndex = allSteps.firstIndex(of: status.currentStep) else { return }
+        
+        let nextIndex = min(currentIndex + 1, allSteps.count - 1)
+        let nextStep = allSteps[nextIndex]
+        
+        print("🔄 Moving to next step: \(status.currentStep) -> \(nextStep)")
+        
+        // Update local status to progress
+        onboardingStatus = OnboardingStatus(
+            isComplete: false,
+            currentStep: nextStep,
+            completedSteps: status.completedSteps + [status.currentStep],
+            progressPercentage: Double((status.completedSteps.count + 1)) / Double(allSteps.count) * 100
+        )
+        
+        updateCurrentStepIndex()
+    }
+    
+    private func forceStepProgression() {
+        guard let status = onboardingStatus else { return }
+        
+        print("🔄 Forcing step progression for: \(status.currentStep)")
+        
+        // Mark current step as completed and move to next
+        var newCompletedSteps = status.completedSteps
+        if !newCompletedSteps.contains(status.currentStep) {
+            newCompletedSteps.append(status.currentStep)
+        }
+        
+        let allSteps = OnboardingStep.allCases
+        let currentIndex = allSteps.firstIndex(of: status.currentStep) ?? 0
+        let nextIndex = min(currentIndex + 1, allSteps.count - 1)
+        let nextStep = allSteps[nextIndex]
+        
+        let progressPercentage = Double(newCompletedSteps.count) / Double(allSteps.count) * 100
+        let isComplete = newCompletedSteps.count == allSteps.count
+        
+        print("🔄 Forced progression: \(status.currentStep) -> \(nextStep)")
+        print("📊 Progress: \(newCompletedSteps.count)/\(allSteps.count) steps (\(Int(progressPercentage))%)")
+        
+        onboardingStatus = OnboardingStatus(
+            isComplete: isComplete,
+            currentStep: nextStep,
+            completedSteps: newCompletedSteps,
+            progressPercentage: progressPercentage
+        )
+        
+        updateCurrentStepIndex()
+        
+        // If onboarding is complete, save to UserDefaults
+        if isComplete {
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            print("🎉 Onboarding completed via forced progression!")
         }
     }
 }

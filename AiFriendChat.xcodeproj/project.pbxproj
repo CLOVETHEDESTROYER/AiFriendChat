@@ -47,7 +47,7 @@
 		9DDE9E212D57C384009FBE55 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DDE9E1F2D57C384009FBE55 /* PurchaseManager.swift */; };
 		9DDE9E252D586585009FBE55 /* CallHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DDE9E242D586585009FBE55 /* CallHistory.swift */; };
 		9DFC07D62D5BDCB700E88B1B /* SavedPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DFC07D52D5BDCB700E88B1B /* SavedPrompt.swift */; };
-		C02A5C192E59213900514E85 /* AppleSignInButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C02A5C182E59213900514E85 /* AppleSignInButton.swift */; };
+
 		C089B0F42E0F32180034854F /* Configuration.storekit in Resources */ = {isa = PBXBuildFile; fileRef = C089B0F32E0F32180034854F /* Configuration.storekit */; };
 		C0CB9E242E2801DB00D74546 /* BackendService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CB9E232E2801DB00D74546 /* BackendService.swift */; };
 		C0CC99D12E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0CC99CF2E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift */; };
@@ -126,7 +126,7 @@
 		9DDE9E1F2D57C384009FBE55 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
 		9DDE9E242D586585009FBE55 /* CallHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallHistory.swift; sourceTree = "<group>"; };
 		9DFC07D52D5BDCB700E88B1B /* SavedPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPrompt.swift; sourceTree = "<group>"; };
-		C02A5C182E59213900514E85 /* AppleSignInButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInButton.swift; sourceTree = "<group>"; };
+
 		C089B0F32E0F32180034854F /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
 		C0CB9E232E2801DB00D74546 /* BackendService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendService.swift; sourceTree = "<group>"; };
 		C0CC99CF2E4FD5C5001CED3E /* EnhancedScenarioSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedScenarioSelectionView.swift; sourceTree = "<group>"; };
@@ -245,7 +245,7 @@
 		9D1E6C652D418B80004F7125 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				C02A5C182E59213900514E85 /* AppleSignInButton.swift */,
+		
 				C0CC99E72E500965001CED3E /* EULAView.swift */,
 				C0CC99E82E500965001CED3E /* RealtimeCallView.swift */,
 				C0CC99D92E5008A7001CED3E /* onboarding.md */,
@@ -514,7 +514,7 @@
 				C0CB9E242E2801DB00D74546 /* BackendService.swift in Sources */,
 				9D1E6C7A2D418B80004F7125 /* NetworkManager.swift in Sources */,
 				9D1E6C7B2D418B80004F7125 /* CallService.swift in Sources */,
-				C02A5C192E59213900514E85 /* AppleSignInButton.swift in Sources */,
+		
 				C0CC99DB2E5008A7001CED3E /* OnboardingView.swift in Sources */,
 				9D1E6C7C2D418B80004F7125 /* RegisterView.swift in Sources */,
 				9D2571C62D55D6FA00FDB900 /* ScheduleView.swift in Sources */,

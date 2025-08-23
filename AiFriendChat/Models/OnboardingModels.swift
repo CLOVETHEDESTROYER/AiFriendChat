@@ -11,10 +11,10 @@ import Foundation
 // These models are designed for the consumer mobile app with simplified onboarding
 
 enum OnboardingStep: String, CaseIterable, Codable {
-    case welcome = "phone_setup"      // Maps to backend phone_setup
-    case profile = "calendar"         // Maps to backend calendar  
-    case tutorial = "scenarios"       // Maps to backend scenarios
-    case firstCall = "welcome_call"   // Maps to backend welcome_call
+    case welcome = "welcome"           // Backend now accepts this
+    case profile = "profile"           // Backend now accepts this
+    case tutorial = "tutorial"         // Backend now accepts this
+    case firstCall = "firstCall"       // Backend now accepts this
     
     var title: String {
         switch self {
@@ -57,10 +57,10 @@ enum OnboardingStep: String, CaseIterable, Codable {
 }
 
 struct OnboardingStatus: Codable {
-    let isComplete: Bool
-    let currentStep: OnboardingStep
-    let completedSteps: [OnboardingStep]
-    let progressPercentage: Double
+    var isComplete: Bool
+    var currentStep: OnboardingStep
+    var completedSteps: [OnboardingStep]
+    var progressPercentage: Double
     
     var nextStep: OnboardingStep? {
         let allSteps = OnboardingStep.allCases

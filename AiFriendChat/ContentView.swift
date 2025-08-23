@@ -71,10 +71,6 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            // TEMPORARY: Clear onboarding status for testing
-            UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
-            UserDefaults.standard.removeObject(forKey: "userName")
-            
             // Check auth status on app launch
             checkAuthStatus()
         }
@@ -121,35 +117,15 @@ struct ContentView: View {
         let hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
         print(" Onboarding check - UserDefaults shows: \(hasCompletedOnboarding)")
         
-        // FORCE ONBOARDING FOR NEW USERS - TEMPORARY FIX
-        if !hasCompletedOnboarding {
-            print(" New user detected, forcing onboarding...")
-            isOnboardingComplete = false
+        if hasCompletedOnboarding {
+            print("✅ Onboarding completed, user can proceed to auth/app")
+            isOnboardingComplete = true
             return
         }
         
         // If no onboarding status is saved, assume new user needs onboarding
-        if !hasCompletedOnboarding {
-            Task {
-                // Try to check backend onboarding status
-                do {
-                    let backendService = BackendService.shared
-                    let status = try await backendService.getOnboardingStatus()
-                    await MainActor.run {
-                        isOnboardingComplete = status.isComplete
-                        if status.isComplete {
-                            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-                        }
-                    }
-                } catch {
-                    // If backend check fails, assume new user needs onboarding
-                    print("Could not check onboarding status: \(error)")
-                    await MainActor.run {
-                        isOnboardingComplete = false
-                    }
-                }
-            }
-        }
+        print("🔄 New user detected, starting onboarding...")
+        isOnboardingComplete = false
     }
 }
 
